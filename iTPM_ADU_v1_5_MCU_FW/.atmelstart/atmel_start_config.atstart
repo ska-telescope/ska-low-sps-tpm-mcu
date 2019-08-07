@@ -4,10 +4,10 @@ versions:
   api: '1.0'
   backend: 1.6.148
   commit: 605f106ab95776472e3febf2fac2471441fb1816
-  content: 1.0.1582
+  content: 1.0.1600
   content_pack_name: acme-packs-all
   format: '2'
-  frontend: 1.6.1878
+  frontend: 1.6.1881
 board:
   identifier: CustomBoard
   device: SAMD21J18A-AF
@@ -281,7 +281,7 @@ drivers:
       enable_gclk_gen_7: false
       gclk_arch_gen_0_RUNSTDBY: false
       gclk_arch_gen_0_enable: true
-      gclk_arch_gen_0_idc: false
+      gclk_arch_gen_0_idc: true
       gclk_arch_gen_0_oe: false
       gclk_arch_gen_0_oov: false
       gclk_arch_gen_1_RUNSTDBY: false
@@ -324,13 +324,13 @@ drivers:
       gclk_gen_0_oscillator: Digital Frequency Locked Loop (DFLL48M)
       gclk_gen_1_div: 1
       gclk_gen_1_div_sel: false
-      gclk_gen_1_oscillator: 8MHz Internal Oscillator (OSC8M)
+      gclk_gen_1_oscillator: 32kHz High Accuracy Internal Oscillator (OSC32K)
       gclk_gen_2_div: 1
       gclk_gen_2_div_sel: false
       gclk_gen_2_oscillator: External Crystal Oscillator 0.4-32MHz (XOSC)
       gclk_gen_3_div: 1
       gclk_gen_3_div_sel: false
-      gclk_gen_3_oscillator: 32kHz High Accuracy Internal Oscillator (OSC32K)
+      gclk_gen_3_oscillator: 8MHz Internal Oscillator (OSC8M)
       gclk_gen_4_div: 1
       gclk_gen_4_div_sel: false
       gclk_gen_4_oscillator: External Crystal Oscillator 0.4-32MHz (XOSC)
@@ -359,7 +359,7 @@ drivers:
       cpu_clock_source: Generic clock generator 0
       cpu_div: '1'
       enable_cpu_clock: true
-      nvm_wait_states: '0'
+      nvm_wait_states: '1'
     optional_signals: []
     variant: null
     clocks:
@@ -413,12 +413,12 @@ drivers:
           external: false
           external_frequency: 0
         - name: Slow
-          input: Generic clock generator 1
+          input: Generic clock generator 3
           external: false
           external_frequency: 0
         configuration:
           core_gclk_selection: Generic clock generator 0
-          slow_gclk_selection: Generic clock generator 1
+          slow_gclk_selection: Generic clock generator 3
   USART_XO3:
     user_label: USART_XO3
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::SERCOM3::driver_config_definition::UART::HAL:Driver:USART.Sync
@@ -462,12 +462,12 @@ drivers:
           external: false
           external_frequency: 0
         - name: Slow
-          input: Generic clock generator 1
+          input: Generic clock generator 3
           external: false
           external_frequency: 0
         configuration:
           core_gclk_selection: Generic clock generator 0
-          slow_gclk_selection: Generic clock generator 1
+          slow_gclk_selection: Generic clock generator 3
   SPI_0:
     user_label: SPI_0
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::SERCOM4::driver_config_definition::SPI.Master::HAL:Driver:SPI.Master.Sync
@@ -840,23 +840,23 @@ drivers:
     api: HAL:HPL:SYSCTRL
     configuration:
       dfll48m_arch_bplckc: false
-      dfll48m_arch_calibration: false
+      dfll48m_arch_calibration: true
       dfll48m_arch_ccdis: false
       dfll48m_arch_coarse: 31
       dfll48m_arch_enable: true
-      dfll48m_arch_fine: 512
+      dfll48m_arch_fine: 511
       dfll48m_arch_llaw: false
-      dfll48m_arch_ondemand: true
+      dfll48m_arch_ondemand: false
       dfll48m_arch_qldis: false
       dfll48m_arch_runstdby: false
       dfll48m_arch_stable: false
       dfll48m_arch_usbcrm: false
       dfll48m_arch_waitlock: false
       dfll48m_mode: Open Loop Mode
-      dfll48m_mul: 0
-      dfll48m_ref_clock: Generic clock generator 3
-      dfll_arch_cstep: 1
-      dfll_arch_fstep: 1
+      dfll48m_mul: 1465
+      dfll48m_ref_clock: Generic clock generator 1
+      dfll_arch_cstep: 31
+      dfll_arch_fstep: 511
       enable_dfll48m: true
       enable_fdpll96m: false
       enable_osc32k: true
@@ -876,17 +876,17 @@ drivers:
       osc32k_arch_en1k: false
       osc32k_arch_en32k: false
       osc32k_arch_enable: true
-      osc32k_arch_ondemand: true
+      osc32k_arch_ondemand: false
       osc32k_arch_overwrite_calibration: false
       osc32k_arch_runstdby: false
-      osc32k_arch_startup: 3 Clock Cycles (92us)
+      osc32k_arch_startup: 6 Clock Cycles (183us)
       osc32k_arch_wrtlock: false
       osc8m_arch_calib: 0
       osc8m_arch_enable: true
-      osc8m_arch_ondemand: true
+      osc8m_arch_ondemand: false
       osc8m_arch_overwrite_calibration: false
       osc8m_arch_runstdby: false
-      osc8m_presc: '8'
+      osc8m_presc: '1'
       osculp32k_arch_calib: 0
       osculp32k_arch_overwrite_calibration: false
       osculp32k_arch_wrtlock: false

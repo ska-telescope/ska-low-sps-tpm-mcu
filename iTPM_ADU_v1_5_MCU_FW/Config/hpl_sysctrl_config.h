@@ -63,7 +63,7 @@
 // <i> If disabled, the oscillator will always be running when enabled.
 // <id> osc8m_arch_ondemand
 #ifndef CONF_OSC8M_ONDEMAND
-#define CONF_OSC8M_ONDEMAND 1
+#define CONF_OSC8M_ONDEMAND 0
 #endif
 
 // <q> Run In Standby
@@ -84,7 +84,7 @@
 // <i> Default: No Prescaling
 // <id> osc8m_presc
 #ifndef CONF_OSC8M_PRESC
-#define CONF_OSC8M_PRESC SYSCTRL_OSC8M_PRESC_3_Val
+#define CONF_OSC8M_PRESC SYSCTRL_OSC8M_PRESC_0_Val
 #endif
 
 // <q> Overwrite Default Osc Calibration
@@ -126,7 +126,7 @@
 // <i> If this bit is 1, the oscillator will only be running when requested by a peripheral.
 // <id> osc32k_arch_ondemand
 #ifndef CONF_OSC32K_ONDEMAND
-#define CONF_OSC32K_ONDEMAND 1
+#define CONF_OSC32K_ONDEMAND 0
 #endif
 
 // <q> Run In Standby
@@ -172,7 +172,7 @@
 // <i> Default: 10 Clock Cycles (305us)
 // <id> osc32k_arch_startup
 #ifndef CONF_OSC32K_STARTUP
-#define CONF_OSC32K_STARTUP CONF_OSC_STARTUP_TIME_92MCS
+#define CONF_OSC32K_STARTUP CONF_OSC_STARTUP_TIME_183MCS
 #endif
 
 // <q> Overwrite Default Osc Calibration
@@ -425,7 +425,7 @@
 // <i> Select the clock source.
 // <id> dfll48m_ref_clock
 #ifndef CONF_DFLL_GCLK
-#define CONF_DFLL_GCLK GCLK_CLKCTRL_GEN_GCLK3_Val
+#define CONF_DFLL_GCLK GCLK_CLKCTRL_GEN_GCLK1_Val
 #endif
 
 // <h> DFLL Control
@@ -470,7 +470,7 @@
 // <i> If this bit is 1: the DFLL will only be running when requested by a peripheral.
 // <id> dfll48m_arch_ondemand
 #ifndef CONF_DFLL_ONDEMAND
-#define CONF_DFLL_ONDEMAND 1
+#define CONF_DFLL_ONDEMAND 0
 #endif
 
 // <q> Run In Standby
@@ -526,13 +526,13 @@
 // <o> Coarse Maximum Step <0x0-0x1F>
 // <id> dfll_arch_cstep
 #ifndef CONF_DFLL_CSTEP
-#define CONF_DFLL_CSTEP 1
+#define CONF_DFLL_CSTEP 31
 #endif
 
 // <o> Fine Maximum Step <0x0-0x3FF>
 // <id> dfll_arch_fstep
 #ifndef CONF_DFLL_FSTEP
-#define CONF_DFLL_FSTEP 1
+#define CONF_DFLL_FSTEP 511
 #endif
 
 //  <o>DFLL Multiply Factor<0-65535>
@@ -540,14 +540,14 @@
 //  <i> Default: 0
 //  <id> dfll48m_mul
 #ifndef CONF_DFLL_MUL
-#define CONF_DFLL_MUL 0
+#define CONF_DFLL_MUL 1465
 #endif
 
 // <e> DFLL Calibration Overwrite
 // <i> Indicates whether Overwrite Calibration value of DFLL
 // <id> dfll48m_arch_calibration
 #ifndef CONF_DFLL_OVERWRITE_CALIBRATION
-#define CONF_DFLL_OVERWRITE_CALIBRATION 0
+#define CONF_DFLL_OVERWRITE_CALIBRATION 1
 #endif
 
 // <o> Coarse Value <0x0-0x3F>
@@ -559,7 +559,7 @@
 // <o> Fine Value <0x0-0x3FF>
 // <id> dfll48m_arch_fine
 #ifndef CONF_DFLL_FINE
-#define CONF_DFLL_FINE (0x200)
+#define CONF_DFLL_FINE (0x1ff)
 #endif
 
 #if CONF_DFLL_OVERWRITE_CALIBRATION == 0

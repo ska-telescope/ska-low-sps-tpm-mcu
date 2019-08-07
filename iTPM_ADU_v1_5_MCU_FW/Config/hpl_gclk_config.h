@@ -44,7 +44,7 @@
 // <i> Indicates whether Improve Duty Cycle is enabled or not
 // <id> gclk_arch_gen_0_idc
 #ifndef CONF_GCLK_GEN_0_IDC
-#define CONF_GCLK_GEN_0_IDC 0
+#define CONF_GCLK_GEN_0_IDC 1
 #endif
 
 // <q> Generic Clock Generator Enable
@@ -142,7 +142,7 @@
 // <i> This defines the clock source for generic clock generator 1
 // <id> gclk_gen_1_oscillator
 #ifndef CONF_GCLK_GEN_1_SRC
-#define CONF_GCLK_GEN_1_SRC GCLK_GENCTRL_SRC_OSC8M
+#define CONF_GCLK_GEN_1_SRC GCLK_GENCTRL_SRC_OSC32K
 #endif
 // </h>
 
@@ -294,7 +294,7 @@
 // <i> This defines the clock source for generic clock generator 3
 // <id> gclk_gen_3_oscillator
 #ifndef CONF_GCLK_GEN_3_SRC
-#define CONF_GCLK_GEN_3_SRC GCLK_GENCTRL_SRC_OSC32K
+#define CONF_GCLK_GEN_3_SRC GCLK_GENCTRL_SRC_OSC8M
 #endif
 // </h>
 
