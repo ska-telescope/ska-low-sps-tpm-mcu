@@ -311,7 +311,7 @@
 // <i> USART baud rate setting
 // <id> usart_baud_rate
 #ifndef CONF_SERCOM_3_USART_BAUD
-#define CONF_SERCOM_3_USART_BAUD 9600
+#define CONF_SERCOM_3_USART_BAUD 115200
 #endif
 
 // </h>
@@ -537,7 +537,7 @@
 // <i> The SPI data transfer rate
 // <id> spi_master_baud_rate
 #ifndef CONF_SERCOM_4_SPI_BAUD
-#define CONF_SERCOM_4_SPI_BAUD 50000
+#define CONF_SERCOM_4_SPI_BAUD 1000000
 #endif
 
 // </h>
@@ -545,14 +545,14 @@
 // <e> Advanced Configuration
 // <id> spi_master_advanced
 #ifndef CONF_SERCOM_4_SPI_ADVANCED
-#define CONF_SERCOM_4_SPI_ADVANCED 0
+#define CONF_SERCOM_4_SPI_ADVANCED 1
 #endif
 
 // <o> Dummy byte <0x00-0x1ff>
 // <id> spi_master_dummybyte
 // <i> Dummy byte used when reading data from the slave without sending any data
 #ifndef CONF_SERCOM_4_SPI_DUMMYBYTE
-#define CONF_SERCOM_4_SPI_DUMMYBYTE 0x1ff
+#define CONF_SERCOM_4_SPI_DUMMYBYTE 0xff
 #endif
 
 // <o> Data Order

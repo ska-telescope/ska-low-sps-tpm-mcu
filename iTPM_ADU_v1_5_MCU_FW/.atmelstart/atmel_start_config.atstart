@@ -438,7 +438,7 @@ drivers:
       usart_arch_sampa: 7-8-9 (3-4-5 8-bit over-sampling)
       usart_arch_sampr: 16x arithmetic
       usart_arch_sfde: false
-      usart_baud_rate: 9600
+      usart_baud_rate: 115200
       usart_character_size: 8 bits
       usart_parity: No parity
       usart_rx_enable: true
@@ -474,16 +474,16 @@ drivers:
     functionality: SPI
     api: HAL:Driver:SPI_Master_Sync
     configuration:
-      spi_master_advanced: false
+      spi_master_advanced: true
       spi_master_arch_cpha: Sample input on leading edge
       spi_master_arch_cpol: SCK is low when idle
       spi_master_arch_dbgstop: Keep running
       spi_master_arch_dord: MSB first
       spi_master_arch_ibon: In data stream
       spi_master_arch_runstdby: false
-      spi_master_baud_rate: 50000
+      spi_master_baud_rate: 1000000
       spi_master_character_size: 8 bits
-      spi_master_dummybyte: 511
+      spi_master_dummybyte: 255
       spi_master_rx_enable: true
     optional_signals: []
     variant:
@@ -1022,6 +1022,13 @@ pads:
     mode: Digital input
     user_label: XO3_LINK0
     configuration: null
+  FPGA_CS:
+    name: PB16
+    definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::pad::PB16
+    mode: Digital output
+    user_label: FPGA_CS
+    configuration:
+      pad_initial_level: High
   BACKPL_RESET:
     name: PB17
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::pad::PB17

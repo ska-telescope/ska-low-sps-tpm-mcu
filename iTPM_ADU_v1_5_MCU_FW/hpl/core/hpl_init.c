@@ -367,7 +367,7 @@ void _init_chip(void)
 
 	_pm_init();
 	SystemInitP();
-	//_sysctrl_init_sources();
+//_sysctrl_init_sources();
 // #if _GCLK_INIT_1ST
 // 	_gclk_init_generators_by_fref(_GCLK_INIT_1ST);
 // #endif

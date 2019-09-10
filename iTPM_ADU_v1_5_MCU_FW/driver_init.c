@@ -338,6 +338,20 @@ void system_init(void)
 
 	gpio_set_pin_function(USR_LED0, GPIO_PIN_FUNCTION_OFF);
 
+	// GPIO on PB16
+
+	gpio_set_pin_level(FPGA_CS,
+	                   // <y> Initial level
+	                   // <id> pad_initial_level
+	                   // <false"> Low
+	                   // <true"> High
+	                   true);
+
+	// Set pin direction to output
+	gpio_set_pin_direction(FPGA_CS, GPIO_DIRECTION_OUT);
+
+	gpio_set_pin_function(FPGA_CS, GPIO_PIN_FUNCTION_OFF);
+
 	// GPIO on PB17
 
 	gpio_set_pin_level(BACKPL_RESET,
