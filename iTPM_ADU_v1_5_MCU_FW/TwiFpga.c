@@ -37,16 +37,16 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	twi_ctrl_data += (ICaddress); // [9:0] command - [6:0] IC address
 	twi_ctrl_data += address; // [9:0] command - [9:8] FPGA router TWI address
 	
-	XO3_WriteByte(twi_offset + twi_wrdata, datatx);
-	XO3_WriteByte(twi_offset + twi_command, twi_ctrl_data);
+	XO3_WriteByte(itpm_cpld_i2c_transmit, datatx);
+	XO3_WriteByte(itpm_cpld_i2c_command, twi_ctrl_data);
 	for (int i = 0; i < 0xffff; i++) asm("nop");
-    XO3_Read(twi_offset + twi_status, &statusIN);
+    XO3_Read(itpm_cpld_i2c_status, &statusIN);
 	while (statusIN == (0x1 || 0x3)) {
 		busyRetry++;
 		if (busyRetry >= MAX_BUSY_RETRY) return (int)statusIN;
-		XO3_Read(twi_offset + twi_status, &statusIN);
+		XO3_Read(itpm_cpld_i2c_status, &statusIN);
 	}
-	XO3_Read(twi_offset + tiw_rdata, &dataIN);
+	XO3_Read(itpm_cpld_i2c_receive, &dataIN);
 	
 	if ((byte2write > 1) || (address != i2c3)) { // Chiedere ad ale di invertire le letture
 		tempbyte0 = (uint8_t)dataIN;
