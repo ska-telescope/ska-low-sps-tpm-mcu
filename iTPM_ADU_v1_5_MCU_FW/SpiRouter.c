@@ -137,7 +137,6 @@ SPI_sync(
 		transfer.size  = _count;
 
 		gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS	
-		gpio_set_pin_level(USR_LED1, false);	
 		/*for(int i=0;i<_count;i++){
 			//spi_write(SPI_MASTER, tmp[i], 0, 0);
 			//rxbuf[i]=SPI1.transfer(tmp[i]);
@@ -148,7 +147,6 @@ SPI_sync(
 		//io_read(io, rxBuffer, _count);
 		//spi_transceive_packet(MYSPI, tmp, rxbuf, _count);
 		gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
-		gpio_set_pin_level(USR_LED1, true);
 		
 		
 		

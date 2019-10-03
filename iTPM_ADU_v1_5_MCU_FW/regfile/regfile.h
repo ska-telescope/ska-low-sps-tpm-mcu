@@ -10,6 +10,7 @@
 #define REGFILE_H_
 
 #include "itpm_cpld.h"
+#include "twi_fpga.h"
 
 // Register Base Address
 #define cpld_offset	0x00000000

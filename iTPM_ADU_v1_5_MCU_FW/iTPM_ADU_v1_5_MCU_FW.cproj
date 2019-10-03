@@ -192,7 +192,7 @@
 </framework-data>
     </AsfFrameworkConfig>
     <avrtool>com.atmel.avrdbg.tool.samice</avrtool>
-    <avrtoolserialnumber>20126405</avrtoolserialnumber>
+    <avrtoolserialnumber>20126333</avrtoolserialnumber>
     <avrdeviceexpectedsignature>0x10010300</avrdeviceexpectedsignature>
     <avrtoolinterface>SWD</avrtoolinterface>
     <com_atmel_avrdbg_tool_samice>
@@ -203,7 +203,7 @@
         <InterfaceName>SWD</InterfaceName>
       </ToolOptions>
       <ToolType>com.atmel.avrdbg.tool.samice</ToolType>
-      <ToolNumber>20126405</ToolNumber>
+      <ToolNumber>20126333</ToolNumber>
       <ToolName>SAM-ICE</ToolName>
     </com_atmel_avrdbg_tool_samice>
     <avrtoolinterfaceclock>2000000</avrtoolinterfaceclock>
@@ -340,6 +340,7 @@
     <ListValues>
       <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
       <Value>../regfile</Value>
+      <Value>../libs</Value>
       <Value>../Config</Value>
       <Value>../</Value>
       <Value>../examples</Value>
@@ -851,6 +852,12 @@
     <Compile Include="hri\hri_wdt_d21.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="libs\ADT7408.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="libs\ADT7408.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
@@ -860,10 +867,19 @@
     <Compile Include="regfile\regfile.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="regfile\twi_fpga.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="SpiRouter.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="SpiRouter.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="TwiFpga.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="TwiFpga.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
@@ -892,6 +908,7 @@
     <Folder Include="hpl\tc\" />
     <Folder Include="hpl\wdt\" />
     <Folder Include="hri\" />
+    <Folder Include="libs" />
     <Folder Include="regfile\" />
   </ItemGroup>
   <ItemGroup>

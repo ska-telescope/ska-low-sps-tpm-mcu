@@ -1,36 +1,30 @@
 #include <atmel_start.h>
 #include "SpiRouter.h"
 #include "regfile.h"
+#include "TwiFpga.h"
+#include "ADT7408.h"
 
-uint16_t adcArrgh[2][18] = {
+#define ADCCOLUMNS 14
+uint16_t adcArrgh[2][ADCCOLUMNS] = {
 	{
-		11, //PB03 - LED0_ILL
-		10, //PB02 - LED0_TEMP
+		4,  // PA04 -SW_AVDD1
+		5,  // PA05 - SW_AVDD2
+		6,  // PA06 - AVDD3
+		7,  // PA07 - MAN_1V2
+		16, // PA08 - DDR0_VREF
+		17, // PA09 - DDR1_VREF
+		18, // PA10 - VM_DRVDD
 		
-		8, //PB00 - LED1_ILL
-		9, //PB01 - LED1_TEMP
+		8,  // PB00 - VIN_SCALED
+		9,  // PB01 - VM_MAN3V3
+		10, // PB02 - VM_MAN1V8	
+		11, // PB03 - MON_5V0	
+		14, // PB06 - MGT_AV
+		15, // PB07 - MGT_AVTT	
 		
-		12, //PB04 - LED2_ILL
-		13, //PB05 - LED2_TEMP
-		
-		14, //PB06 - LED3_ILL
-		15, //PB07 - LED3_TEMP
-		
-		2, //PB08 - LED4_ILL
-		3, //PB09 - LED4_TEMP
-		
-		6, //PA06 - LED5_ILL
-		19, //PA11 - LED5_TEMP
-		
-		7, //PA07 - VIN_MON
-		18, //PA10 - MON_5V
-		26, //INT 0x1A - SCALED CORE VCC
-		27, //INT 0x1B - SCALED IO VCC
 		24, //INT 0x18 - INTERNAL TEMP
-		
-		5, //PA05 - USER_PTC_READ
 	},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}   /*  initializers for row indexed by 1 */
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}   /*  initializers for row indexed by 1 */
 };
 
 int anaReadPos = 0;
@@ -68,7 +62,7 @@ void analogRead() { // Single read, much FASTER
 		adcArrgh[1][anaReadPos] = ADC->RESULT.reg; // Save ADC read to the array
 		ADCsync();
 		ADC->SWTRIG.reg = 0x01;                    //  and flush for good measure
-		if (anaReadPos >= 16){
+		if (anaReadPos >= ADCCOLUMNS){
 			anaReadPos = 0;
 			anaNotReady = false;
 		}
@@ -77,6 +71,18 @@ void analogRead() { // Single read, much FASTER
 		//ADC->INTFLAG.bit.RESRDY = 1;
 		ADC->SWTRIG.bit.START = 1;
 	}
+}
+
+void TWIdataBlock(void){
+	int status;
+	uint32_t retvalue = 0xffffffff;
+
+	// i2c1
+	status = twiFpgaWrite(0x30, 1, 2, 0x05, &retvalue, i2c1); //temp_value 0x30
+	//XO3_WriteByte(fram_ADT7408_M_1_temp_val + fram_offset, retvalue);
+	retvalue = 0xffffffff;
+
+	
 }
 
 
@@ -96,12 +102,12 @@ int main(void)
 	while (1) {
 		
 		gpio_toggle_pin_level(USR_LED0);
-		uint32_t vers;
 		XO3_Read(0x30000010, &vers);
 		XO3_WriteByte(0x30000010, 0x01234567);
 		XO3_Read(0x30000010, &vers);
 		XO3_WriteByte(0x30000010, 0x76543210);
 		XO3_Read(0x30000010, &vers);
+		TWIdataBlock();
 		delay_ms(100);
 	}
 }
