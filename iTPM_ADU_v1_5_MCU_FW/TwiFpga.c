@@ -20,7 +20,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	
 	ICaddress = ICaddress >> 1; // Shift 8bit to 7bit address
 	
-	if ((byte2write > 1) || (address != i2c3)) { // Chiedere ad ale di invertire le scritture
+	if (byte2write > 1) { // Chiedere ad ale di invertire le scritture
 		tempbyte0 = (uint8_t)datatx;
 		tempbyte1 = (uint8_t)datatx >> 8;
 		tempbyte2 = (uint8_t)datatx >> 16;
@@ -32,10 +32,11 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 		if (byte2write == 4) datatx = ((tempbyte0 << 24) + (tempbyte1 << 16) + (tempbyte2 << 8) + tempbyte3);
 	}
 	
-	twi_ctrl_data += (byte2read << 24); // [31:24] byte number to read
-	twi_ctrl_data += (byte2write << 16); // [23:16] byte number to write
+	twi_ctrl_data += (address << 16); // [9:0] command - [9:8] FPGA router TWI address
+	twi_ctrl_data += (byte2read << 12); // [31:24] byte number to read
+	twi_ctrl_data += (byte2write << 8); // [23:16] byte number to write
 	twi_ctrl_data += (ICaddress); // [9:0] command - [6:0] IC address
-	twi_ctrl_data += address; // [9:0] command - [9:8] FPGA router TWI address
+	
 	
 	XO3_WriteByte(itpm_cpld_i2c_transmit, datatx);
 	XO3_WriteByte(itpm_cpld_i2c_command, twi_ctrl_data);
@@ -48,11 +49,11 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	}
 	XO3_Read(itpm_cpld_i2c_receive, &dataIN);
 	
-	if ((byte2write > 1) || (address != i2c3)) { // Chiedere ad ale di invertire le letture
-		tempbyte0 = (uint8_t)dataIN;
-		tempbyte1 = (uint8_t)dataIN >> 8;
-		tempbyte2 = (uint8_t)dataIN >> 16;
-		tempbyte3 = (uint8_t)dataIN >> 24;
+	if (byte2write > 1) { // Chiedere ad ale di invertire le letture
+		tempbyte0 = dataIN;
+		tempbyte1 = dataIN >> 8;
+		tempbyte2 = dataIN >> 16;
+		tempbyte3 = dataIN >> 24;
 		dataIN = 0x0;
 		
 		if (byte2read == 2) dataIN = ((tempbyte0 << 8 ) + tempbyte1);

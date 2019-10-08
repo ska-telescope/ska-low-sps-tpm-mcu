@@ -36,6 +36,16 @@ static void ADCsync() {
 	while (ADC->STATUS.bit.SYNCBUSY == 1); //Just wait till the ADC is free
 }
 
+void framRead(uint32_t fram_register, uint32_t* readback){
+	uint32_t intreadback;
+	XO3_Read(itpm_cpld_bram_cpu + fram_register, &intreadback);
+	*readback = intreadback;
+}
+
+void framWrite(uint32_t fram_register, uint32_t writedata){
+	XO3_WriteByte(itpm_cpld_bram_cpu + fram_register, writedata);
+}
+
 
 void analogStart() { // Single read, much FASTER
 	//REG_PM_APBCMASK |= 0x10000; // Enable bus Clock
@@ -94,6 +104,8 @@ int main(void)
 	/* Initializes MCU, drivers and middleware */
 	atmel_start_init();
 	
+	framWrite(FRAM_MCU_VERSION, 0xb0000001);
+	
 	uint32_t vers;
 	
 	gpio_set_pin_level(USR_LED1, true);
@@ -103,10 +115,12 @@ int main(void)
 		
 		gpio_toggle_pin_level(USR_LED0);
 		XO3_Read(0x30000010, &vers);
-		XO3_WriteByte(0x30000010, 0x01234567);
+		//XO3_WriteByte(itpm_cpld_regfile_enable, 0x1);
 		XO3_Read(0x30000010, &vers);
-		XO3_WriteByte(0x30000010, 0x76543210);
-		XO3_Read(0x30000010, &vers);
+		XO3_WriteByte(itpm_cpld_i2c_transmit, 0x7777777);
+		XO3_Read(itpm_cpld_i2c_transmit, &vers); 
+		framRead(FRAM_MCU_VERSION, &vers);
+		delay_ms(100);
 		TWIdataBlock();
 		delay_ms(100);
 	}

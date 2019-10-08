@@ -348,6 +348,26 @@
 #define itpm_cpld_i2c_command_R	0x0
 #define itpm_cpld_i2c_command_D	"Missing Description"
 
+#define itpm_cpld_i2c_command_address  		0x40000000	//RW
+#define itpm_cpld_i2c_command_address_BM	0x7F
+#define itpm_cpld_i2c_command_address_BO	0
+#define itpm_cpld_i2c_command_address_D		"Missing Description"
+
+#define itpm_cpld_i2c_command_wrbyte  		0x40000000	//RW
+#define itpm_cpld_i2c_command_wrbyte_BM		0xF00
+#define itpm_cpld_i2c_command_wrbyte_BO		8
+#define itpm_cpld_i2c_command_wrbyte_D		"Missing Description"
+
+#define itpm_cpld_i2c_command_rdbbyte  		0x40000000	//RW
+#define itpm_cpld_i2c_command_rdbbyte_BM	0xF000
+#define itpm_cpld_i2c_command_rdbbyte_BO	12
+#define itpm_cpld_i2c_command_rdbbyte_D		"Missing Description"
+
+#define itpm_cpld_i2c_command_mux  			0x40000000	//RW
+#define itpm_cpld_i2c_command_mux_BM		0x30000
+#define itpm_cpld_i2c_command_mux_BO		16
+#define itpm_cpld_i2c_command_mux_D			"Missing Description"
+
 #define itpm_cpld_i2c_transmit  	0x40000004	//RW
 #define itpm_cpld_i2c_transmit_M	0xFFFFFFFF
 #define itpm_cpld_i2c_transmit_R	0x0

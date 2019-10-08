@@ -11,6 +11,7 @@
 
 #include "itpm_cpld.h"
 #include "twi_fpga.h"
+#include "fram.h"
 
 // Register Base Address
 #define cpld_offset	0x00000000
