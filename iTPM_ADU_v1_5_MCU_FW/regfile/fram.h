@@ -43,7 +43,7 @@
 #define FRAM_ADC_MGT_AV						0x00000004C //RW - 16 bit
 #define FRAM_ADC_MGT_AVTT					0x000000050 //RW - 16 bit
 #define FRAM_ADC_INTERNAL_MCU_TEMP			0x000000054 //RW - 16 bit
-#define FRAM_BOARD_TEMP						0x000000058 //RW - 16 bit
+#define FRAM_BOARD_TEMP						0x000000058 //RW - 32 bit
 #define FRAM_FPGA0_TEMP						0x00000005C //RW - 16 bit
 #define FRAM_FPGA1_TEMP						0x000000060 //RW - 16 bit
 

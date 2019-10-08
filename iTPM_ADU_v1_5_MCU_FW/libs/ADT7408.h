@@ -10,8 +10,7 @@
 #define ADT7408_H_
 
 // ------------- ADT7408 FLAGS ---------------
-#define ADT7408_ADDRESS1 0x19
-#define ADT7408_ADDRESS2 0x18
+#define ADT7408_ADDRESS1 0x18
 
 #define ADT7408_REG_CAPABILTY 0x00
 #define ADT7408_REG_CONFIGURATION 0x01

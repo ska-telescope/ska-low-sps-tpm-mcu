@@ -1,4 +1,6 @@
 #include <atmel_start.h>
+#include <stdbool.h>
+
 #include "SpiRouter.h"
 #include "regfile.h"
 #include "TwiFpga.h"
@@ -30,11 +32,39 @@ uint16_t adcArrgh[2][ADCCOLUMNS] = {
 int anaReadPos = 0;
 bool anaNotReady = true;
 
+/* --------- VAR -------------------- */
+
+uint32_t ADT7408_temp_raw;
+float ADT7408_temp;
+bool ADT7408Regs[3];
+
+/* -----------------------------------*/
+
 
 static __inline__ void ADCsync() __attribute__((always_inline, unused));
 static void ADCsync() {
 	while (ADC->STATUS.bit.SYNCBUSY == 1); //Just wait till the ADC is free
 }
+
+void writeDataBlock(){
+	framWrite(FRAM_ADC_SW_AVDD1,			adcArrgh[0][4]);
+	framWrite(FRAM_ADC_SW_AVDD2,			adcArrgh[0][5]);
+	framWrite(FRAM_ADC_AVDD3,				adcArrgh[0][6]);
+	framWrite(FRAM_ADC_MAN_1V2,				adcArrgh[0][7]);
+	framWrite(FRAM_ADC_DDR0_VREF,			adcArrgh[0][16]);
+	framWrite(FRAM_ADC_DDR1_VREF,			adcArrgh[0][17]);
+	framWrite(FRAM_ADC_VM_DRVDD,			adcArrgh[0][18]);
+	framWrite(FRAM_ADC_VIN_SCALED,			adcArrgh[0][8]);
+	framWrite(FRAM_ADC_VM_MAN3V3,			adcArrgh[0][9]);
+	framWrite(FRAM_ADC_VM_MAN1V8,			adcArrgh[0][10]);
+	framWrite(FRAM_ADC_MON_5V0,				adcArrgh[0][11]);
+	framWrite(FRAM_ADC_MGT_AV,				adcArrgh[0][14]);
+	framWrite(FRAM_ADC_MGT_AVTT,			adcArrgh[0][15]);
+	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	adcArrgh[0][24]);
+	
+	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
+}
+
 
 void framRead(uint32_t fram_register, uint32_t* readback){
 	uint32_t intreadback;
@@ -88,7 +118,8 @@ void TWIdataBlock(void){
 	uint32_t retvalue = 0xffffffff;
 
 	// i2c1
-	status = twiFpgaWrite(0x30, 1, 2, 0x05, &retvalue, i2c1); //temp_value 0x30
+	readBoardTemp(&ADT7408_temp, &ADT7408Regs);
+	status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
 	//XO3_WriteByte(fram_ADT7408_M_1_temp_val + fram_offset, retvalue);
 	retvalue = 0xffffffff;
 
@@ -115,13 +146,13 @@ int main(void)
 		
 		gpio_toggle_pin_level(USR_LED0);
 		XO3_Read(0x30000010, &vers);
-		//XO3_WriteByte(itpm_cpld_regfile_enable, 0x1);
+		XO3_WriteByte(itpm_cpld_regfile_enable, 0x1);
 		XO3_Read(0x30000010, &vers);
 		XO3_WriteByte(itpm_cpld_i2c_transmit, 0x7777777);
 		XO3_Read(itpm_cpld_i2c_transmit, &vers); 
 		framRead(FRAM_MCU_VERSION, &vers);
-		delay_ms(100);
 		TWIdataBlock();
+		//writeDataBlock();
 		delay_ms(100);
 	}
 }
