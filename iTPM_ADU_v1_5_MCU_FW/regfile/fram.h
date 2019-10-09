@@ -14,9 +14,8 @@
 #ifndef FRAM_H_
 #define FRAM_H_
 
-// All registers are 32bit spaced. The size in comment refers to the shadow TWI register (256 Regs MAX - 0x400)
+// All registers are 32bit spaced. The size in comment refers to the shadow register (256 Regs MAX - 0x400)
 
-// i2c1
 #define FRAM_MCU_VERSION					0x000000000 //R  - 32 bit
 #define FRAM_MCU_COMPILE_DATE				0x000000004 //R  - 32 bit
 #define FRAM_MCU_INTERNAL_COMMAND			0x000000008 //RW - 32 bit
