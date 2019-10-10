@@ -47,20 +47,20 @@ static void ADCsync() {
 }
 
 void writeDataBlock(){
-	framWrite(FRAM_ADC_SW_AVDD1,			adcArrgh[0][4]);
-	framWrite(FRAM_ADC_SW_AVDD2,			adcArrgh[0][5]);
-	framWrite(FRAM_ADC_AVDD3,				adcArrgh[0][6]);
-	framWrite(FRAM_ADC_MAN_1V2,				adcArrgh[0][7]);
-	framWrite(FRAM_ADC_DDR0_VREF,			adcArrgh[0][16]);
-	framWrite(FRAM_ADC_DDR1_VREF,			adcArrgh[0][17]);
-	framWrite(FRAM_ADC_VM_DRVDD,			adcArrgh[0][18]);
-	framWrite(FRAM_ADC_VIN_SCALED,			adcArrgh[0][8]);
-	framWrite(FRAM_ADC_VM_MAN3V3,			adcArrgh[0][9]);
-	framWrite(FRAM_ADC_VM_MAN1V8,			adcArrgh[0][10]);
-	framWrite(FRAM_ADC_MON_5V0,				adcArrgh[0][11]);
-	framWrite(FRAM_ADC_MGT_AV,				adcArrgh[0][14]);
-	framWrite(FRAM_ADC_MGT_AVTT,			adcArrgh[0][15]);
-	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	adcArrgh[0][24]);
+	framWrite(FRAM_ADC_SW_AVDD1,			adcArrgh[1][0]);
+	framWrite(FRAM_ADC_SW_AVDD2,			adcArrgh[1][1]);
+	framWrite(FRAM_ADC_AVDD3,				adcArrgh[1][2]);
+	framWrite(FRAM_ADC_MAN_1V2,				adcArrgh[1][3]);
+	framWrite(FRAM_ADC_DDR0_VREF,			adcArrgh[1][4]);
+	framWrite(FRAM_ADC_DDR1_VREF,			adcArrgh[1][5]);
+	framWrite(FRAM_ADC_VM_DRVDD,			adcArrgh[1][6]);
+	framWrite(FRAM_ADC_VIN_SCALED,			adcArrgh[1][7]);
+	framWrite(FRAM_ADC_VM_MAN3V3,			adcArrgh[1][8]);
+	framWrite(FRAM_ADC_VM_MAN1V8,			adcArrgh[1][9]);
+	framWrite(FRAM_ADC_MON_5V0,				adcArrgh[1][10]);
+	framWrite(FRAM_ADC_MGT_AV,				adcArrgh[1][11]);
+	framWrite(FRAM_ADC_MGT_AVTT,			adcArrgh[1][12]);
+	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	adcArrgh[1][13]);
 	
 	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
 }
@@ -80,7 +80,7 @@ void framWrite(uint32_t fram_register, uint32_t writedata){
 void analogStart() { // Single read, much FASTER
 	//REG_PM_APBCMASK |= 0x10000; // Enable bus Clock
 	//REG_GCLK_CLKCTRL = 0x4001E;
-	REG_ADC_SAMPCTRL = 5;
+	//REG_ADC_SAMPCTRL = 5;
 	ADC->INPUTCTRL.bit.MUXNEG = 0x18; // Mux NEG GND
 	SYSCTRL->VREF.bit.TSEN = 1; // Enable TSENOR
 	//REG_ADC_REFCTRL = 0;
@@ -93,6 +93,8 @@ void analogStart() { // Single read, much FASTER
 
 	ADCsync();
 	ADC->SWTRIG.bit.START = 1;                 // Start ADC conversion
+	
+	for (int i = 0; i < ADCCOLUMNS; i++) analogRead();
 }
 
 
@@ -102,13 +104,13 @@ void analogRead() { // Single read, much FASTER
 		adcArrgh[1][anaReadPos] = ADC->RESULT.reg; // Save ADC read to the array
 		ADCsync();
 		ADC->SWTRIG.reg = 0x01;                    //  and flush for good measure
-		if (anaReadPos >= ADCCOLUMNS){
+		if (anaReadPos > ADCCOLUMNS -1){
 			anaReadPos = 0;
 			anaNotReady = false;
 		}
 		else anaReadPos++;
 		ADC->INPUTCTRL.bit.MUXPOS = adcArrgh[0][anaReadPos];
-		//ADC->INTFLAG.bit.RESRDY = 1;
+		ADC->INTFLAG.bit.RESRDY = 1;
 		ADC->SWTRIG.bit.START = 1;
 	}
 }
@@ -137,22 +139,33 @@ int main(void)
 	
 	framWrite(FRAM_MCU_VERSION, 0xb0000001);
 	
+	analogStart();
+	
 	uint32_t vers;
 	
+	XO3_WriteByte(itpm_cpld_regfile_enable, 0x0);
+	
+	framWrite(FRAM_MCU_POOLING_INTERVAL, 1000);
+	
 	gpio_set_pin_level(USR_LED1, true);
+	
+	uint32_t mtime;
 
 	/* Replace with your application code */
 	while (1) {
-		
+		mtime = _system_time_get();
 		gpio_toggle_pin_level(USR_LED0);
 		XO3_Read(0x30000010, &vers);
-		XO3_WriteByte(itpm_cpld_regfile_enable, 0x1);
 		XO3_Read(0x30000010, &vers);
 		XO3_WriteByte(itpm_cpld_i2c_transmit, 0x7777777);
 		XO3_Read(itpm_cpld_i2c_transmit, &vers); 
 		framRead(FRAM_MCU_VERSION, &vers);
+		analogRead();
 		TWIdataBlock();
-		//writeDataBlock();
+		writeDataBlock();
+		
+		uint32_t polling;
+		framRead(FRAM_MCU_POOLING_INTERVAL, &polling);
 		delay_ms(100);
 	}
 }

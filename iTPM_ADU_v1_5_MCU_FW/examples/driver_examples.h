@@ -22,6 +22,8 @@ void USART_XO3_example(void);
 
 void delay_example(void);
 
+void CALENDAR_0_example(void);
+
 void TIMER_0_example(void);
 
 void WDT_0_example(void);

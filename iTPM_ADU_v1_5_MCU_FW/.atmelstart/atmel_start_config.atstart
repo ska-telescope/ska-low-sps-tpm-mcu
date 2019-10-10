@@ -4,10 +4,10 @@ versions:
   api: '1.0'
   backend: 1.6.148
   commit: 605f106ab95776472e3febf2fac2471441fb1816
-  content: 1.0.1600
+  content: 1.0.1635
   content_pack_name: acme-packs-all
   format: '2'
-  frontend: 1.6.1881
+  frontend: 1.6.1884
 board:
   identifier: CustomBoard
   device: SAMD21J18A-AF
@@ -21,7 +21,7 @@ drivers:
     functionality: ADC
     api: HAL:Driver:ADC_Async
     configuration:
-      adc_advanced_settings: false
+      adc_advanced_settings: true
       adc_arch_adjres: 0
       adc_arch_corren: false
       adc_arch_dbgrun: false
@@ -36,7 +36,7 @@ drivers:
       adc_arch_resrdyeo: false
       adc_arch_runstdby: false
       adc_arch_samplen: 0
-      adc_arch_samplenum: 1 sample
+      adc_arch_samplenum: 64 samples
       adc_arch_startei: false
       adc_arch_syncei: false
       adc_arch_winlt: 0
@@ -45,11 +45,11 @@ drivers:
       adc_arch_winut: 0
       adc_differential_mode: false
       adc_freerunning_mode: false
-      adc_pinmux_negative: ADC AIN0 pin
-      adc_pinmux_positive: ADC AIN0 pin
-      adc_prescaler: Peripheral clock divided by 4
-      adc_reference: 1.0V voltage reference
-      adc_resolution: 12-bit
+      adc_pinmux_negative: Internal ground
+      adc_pinmux_positive: ADC AIN4 pin
+      adc_prescaler: Peripheral clock divided by 8
+      adc_reference: External reference A
+      adc_resolution: 16-bit (averaging must be enabled)
     optional_signals:
     - identifier: ADC_0:AIN/4
       pad: PA04
@@ -523,6 +523,36 @@ drivers:
     variant: null
     clocks:
       domain_group: null
+  CALENDAR_0:
+    user_label: CALENDAR_0
+    definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::RTC::driver_config_definition::Calendar::HAL:Driver:Calendar
+    functionality: Calendar
+    api: HAL:Driver:Calendar
+    configuration:
+      rtc_arch_init_reset: true
+      rtc_arch_prescaler: Peripheral clock divided by 1024
+      rtc_cmpeo0: false
+      rtc_event_control: false
+      rtc_ovfeo: false
+      rtc_pereo0: false
+      rtc_pereo1: false
+      rtc_pereo2: false
+      rtc_pereo3: false
+      rtc_pereo4: false
+      rtc_pereo5: false
+      rtc_pereo6: false
+      rtc_pereo7: false
+    optional_signals: []
+    variant: null
+    clocks:
+      domain_group:
+        nodes:
+        - name: RTC
+          input: Generic clock generator 0
+          external: false
+          external_frequency: 0
+        configuration:
+          rtc_clk_selection: Generic clock generator 0
   TIMER_0:
     user_label: TIMER_0
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::TC7::driver_config_definition::Timer::HAL:Driver:Timer

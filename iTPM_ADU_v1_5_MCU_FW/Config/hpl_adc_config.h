@@ -18,7 +18,7 @@
 // <i> Defines the bit resolution for the ADC sample values (RESSEL)
 // <id> adc_resolution
 #ifndef CONF_ADC_0_RESSEL
-#define CONF_ADC_0_RESSEL 0x0
+#define CONF_ADC_0_RESSEL 0x1
 #endif
 
 // <o> Reference Selection
@@ -30,7 +30,7 @@
 // <i> Select the reference for the ADC (REFSEL)
 // <id> adc_reference
 #ifndef CONF_ADC_0_REFSEL
-#define CONF_ADC_0_REFSEL 0x0
+#define CONF_ADC_0_REFSEL 0x3
 #endif
 
 // <o> Prescaler configuration
@@ -45,7 +45,7 @@
 // <i> These bits define the ADC clock relative to the peripheral clock (PRESCALER)
 // <id> adc_prescaler
 #ifndef CONF_ADC_0_PRESCALER
-#define CONF_ADC_0_PRESCALER 0x0
+#define CONF_ADC_0_PRESCALER 0x1
 #endif
 
 // <q> Free Running Mode
@@ -91,7 +91,7 @@
 // <i> These bits define the Mux selection for the positive ADC input. (MUXPOS)
 // <id> adc_pinmux_positive
 #ifndef CONF_ADC_0_MUXPOS
-#define CONF_ADC_0_MUXPOS 0x0
+#define CONF_ADC_0_MUXPOS 0x4
 #endif
 
 // <o> Negative Mux Input Selection
@@ -108,7 +108,7 @@
 // <i> These bits define the Mux selection for the negative ADC input. (MUXNEG)
 // <id> adc_pinmux_negative
 #ifndef CONF_ADC_0_MUXNEG
-#define CONF_ADC_0_MUXNEG 0x0
+#define CONF_ADC_0_MUXNEG 0x18
 #endif
 
 // </h>
@@ -116,7 +116,7 @@
 // <e> Advanced Configuration
 // <id> adc_advanced_settings
 #ifndef CONF_ADC_0_ADVANCED_CONFIG
-#define CONF_ADC_0_ADVANCED_CONFIG 0
+#define CONF_ADC_0_ADVANCED_CONFIG 1
 #endif
 
 // <q> Run in standby
@@ -203,7 +203,7 @@
 // <i> Define how many samples should be added together.The result will be available in the Result register (SAMPLENUM)
 // <id> adc_arch_samplenum
 #ifndef CONF_ADC_0_SAMPLENUM
-#define CONF_ADC_0_SAMPLENUM 0x0
+#define CONF_ADC_0_SAMPLENUM 0x6
 #endif
 
 // <o> Sampling Time Length <0-63>
