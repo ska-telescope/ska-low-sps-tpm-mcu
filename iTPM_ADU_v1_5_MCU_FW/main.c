@@ -1,5 +1,20 @@
+/*
+ * iTPM ADU V1.5 MCU FW (BIOS)
+ *
+ * Sanitas EG
+ *
+ * Created: 07/10/2019 09:12:42 ~ Luca Schettini
+ *
+ * Copyright (c) 2017-2019 Sanitas EG srl.  All right reserved.
+ *
+ */ 
+
 #include <atmel_start.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
 #include "SpiRouter.h"
 #include "regfile.h"
@@ -29,14 +44,19 @@ uint16_t adcArrgh[2][ADCCOLUMNS] = {
 	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}   /*  initializers for row indexed by 1 */
 };
 
+float adcDivider[ADCCOLUMNS] = {0, 0, 0, 0, 0, 0, 0, (float)12000/960, 0, 0, (float)5000/1825, 0, 0, 0};
+
 int anaReadPos = 0;
 bool anaNotReady = true;
 
 /* --------- VAR -------------------- */
 
+static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC 2^16
+
 uint32_t ADT7408_temp_raw;
 float ADT7408_temp;
 bool ADT7408Regs[3];
+uint32_t pollingHz;
 
 /* -----------------------------------*/
 
@@ -94,14 +114,22 @@ void analogStart() { // Single read, much FASTER
 	ADCsync();
 	ADC->SWTRIG.bit.START = 1;                 // Start ADC conversion
 	
-	for (int i = 0; i < ADCCOLUMNS; i++) analogRead();
+	while (anaReadPos < ADCCOLUMNS) analogRead();
 }
 
 
 void analogRead() { // Single read, much FASTER
 	if (ADC->INTFLAG.bit.RESRDY == 1){
 		//uint32_t valueRead = ADC->RESULT.reg;
-		adcArrgh[1][anaReadPos] = ADC->RESULT.reg; // Save ADC read to the array
+		//adcArrgh[1][anaReadPos] = ADC->RESULT.reg; // Save ADC read to the array
+		
+		float ADC_voltage = (ADC_STEP * ADC->RESULT.reg) * 1000;
+		///??? float Voltage = (ADC_voltage * ADC_STEP) * 1000;
+		
+		if (adcDivider[anaReadPos] == 0) adcArrgh[1][anaReadPos] = (uint16_t)ADC_voltage;
+		else adcArrgh[1][anaReadPos] = (uint16_t)(ADC_voltage * adcDivider[anaReadPos]);
+		
+		
 		ADCsync();
 		ADC->SWTRIG.reg = 0x01;                    //  and flush for good measure
 		if (anaReadPos > ADCCOLUMNS -1){
@@ -128,6 +156,9 @@ void TWIdataBlock(void){
 	
 }
 
+void timedStuff(){
+	
+}
 
 int main(void)
 {
@@ -137,7 +168,9 @@ int main(void)
 	/* Initializes MCU, drivers and middleware */
 	atmel_start_init();
 	
-	framWrite(FRAM_MCU_VERSION, 0xb0000001);
+	//SysTick_Config(1);
+	
+	framWrite(FRAM_MCU_VERSION, 0xb0000010);
 	
 	analogStart();
 	
@@ -156,16 +189,19 @@ int main(void)
 		mtime = _system_time_get();
 		gpio_toggle_pin_level(USR_LED0);
 		XO3_Read(0x30000010, &vers);
+		
 		XO3_Read(0x30000010, &vers);
 		XO3_WriteByte(itpm_cpld_i2c_transmit, 0x7777777);
 		XO3_Read(itpm_cpld_i2c_transmit, &vers); 
 		framRead(FRAM_MCU_VERSION, &vers);
 		analogRead();
+		
+		uint32_t pollingNew;
+		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
+
 		TWIdataBlock();
 		writeDataBlock();
-		
-		uint32_t polling;
-		framRead(FRAM_MCU_POOLING_INTERVAL, &polling);
-		delay_ms(100);
+
+		delay_ms((uint16_t)pollingNew);
 	}
 }

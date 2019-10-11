@@ -356,8 +356,6 @@ void SystemInitP( void )
 }
 
 
-
-
 /**
  * \brief Initialize the hardware abstraction layer
  */

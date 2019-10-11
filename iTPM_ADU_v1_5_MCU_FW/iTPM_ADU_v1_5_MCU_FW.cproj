@@ -255,7 +255,6 @@
       <Value>../hpl/gclk</Value>
       <Value>../hpl/pm</Value>
       <Value>../hpl/port</Value>
-      <Value>../hpl/rtc</Value>
       <Value>../hpl/sercom</Value>
       <Value>../hpl/sysctrl</Value>
       <Value>../hpl/systick</Value>
@@ -296,7 +295,6 @@
       <Value>../hpl/gclk</Value>
       <Value>../hpl/pm</Value>
       <Value>../hpl/port</Value>
-      <Value>../hpl/rtc</Value>
       <Value>../hpl/sercom</Value>
       <Value>../hpl/sysctrl</Value>
       <Value>../hpl/systick</Value>
@@ -321,7 +319,6 @@
       <Value>../hpl/gclk</Value>
       <Value>../hpl/pm</Value>
       <Value>../hpl/port</Value>
-      <Value>../hpl/rtc</Value>
       <Value>../hpl/sercom</Value>
       <Value>../hpl/sysctrl</Value>
       <Value>../hpl/systick</Value>
@@ -364,7 +361,6 @@
       <Value>../hpl/gclk</Value>
       <Value>../hpl/pm</Value>
       <Value>../hpl/port</Value>
-      <Value>../hpl/rtc</Value>
       <Value>../hpl/sercom</Value>
       <Value>../hpl/sysctrl</Value>
       <Value>../hpl/systick</Value>
@@ -376,7 +372,7 @@
   <armgcc.compiler.optimization.level>Optimize debugging experience (-Og)</armgcc.compiler.optimization.level>
   <armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>True</armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>
   <armgcc.compiler.optimization.DebugLevel>Maximum (-g3)</armgcc.compiler.optimization.DebugLevel>
-  <armgcc.compiler.warnings.AllWarnings>True</armgcc.compiler.warnings.AllWarnings>
+  <armgcc.compiler.warnings.InhibitAllWarnings>True</armgcc.compiler.warnings.InhibitAllWarnings>
   <armgcc.compiler.miscellaneous.OtherFlags>-std=gnu11</armgcc.compiler.miscellaneous.OtherFlags>
   <armgcc.linker.general.UseNewlibNano>True</armgcc.linker.general.UseNewlibNano>
   <armgcc.linker.libraries.Libraries>
@@ -408,7 +404,6 @@
       <Value>../hpl/gclk</Value>
       <Value>../hpl/pm</Value>
       <Value>../hpl/port</Value>
-      <Value>../hpl/rtc</Value>
       <Value>../hpl/sercom</Value>
       <Value>../hpl/sysctrl</Value>
       <Value>../hpl/systick</Value>
@@ -434,7 +429,6 @@
       <Value>../hpl/gclk</Value>
       <Value>../hpl/pm</Value>
       <Value>../hpl/port</Value>
-      <Value>../hpl/rtc</Value>
       <Value>../hpl/sercom</Value>
       <Value>../hpl/sysctrl</Value>
       <Value>../hpl/systick</Value>
@@ -470,9 +464,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Config\hpl_pm_config.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="Config\hpl_rtc_config.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Config\hpl_sercom_config.h">
@@ -520,9 +511,6 @@
     <Compile Include="hal\include\hal_atomic.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="hal\include\hal_calendar.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="hal\include\hal_delay.h">
       <SubType>compile</SubType>
     </Compile>
@@ -560,9 +548,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hal\include\hpl_adc_sync.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="hal\include\hpl_calendar.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hal\include\hpl_core.h">
@@ -661,9 +646,6 @@
     <Compile Include="hal\src\hal_atomic.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="hal\src\hal_calendar.c">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="hal\src\hal_delay.c">
       <SubType>compile</SubType>
     </Compile>
@@ -712,9 +694,6 @@
     <Compile Include="hal\utils\include\utils_assert.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="hal\utils\include\utils_decrement_macro.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="hal\utils\include\utils_event.h">
       <SubType>compile</SubType>
     </Compile>
@@ -722,9 +701,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hal\utils\include\utils_list.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="hal\utils\include\utils_recursion_macro.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hal\utils\include\utils_repeat_macro.h">
@@ -782,12 +758,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hpl\port\hpl_gpio_base.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="hpl\rtc\hpl_rtc.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="hpl\rtc\hpl_rtc_base.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hpl\sercom\hpl_sercom.c">
@@ -942,7 +912,6 @@
     <Folder Include="hpl\gclk\" />
     <Folder Include="hpl\pm\" />
     <Folder Include="hpl\port\" />
-    <Folder Include="hpl\rtc\" />
     <Folder Include="hpl\sercom\" />
     <Folder Include="hpl\sysctrl\" />
     <Folder Include="hpl\systick\" />

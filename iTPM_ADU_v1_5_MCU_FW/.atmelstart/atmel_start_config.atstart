@@ -47,7 +47,7 @@ drivers:
       adc_freerunning_mode: false
       adc_pinmux_negative: Internal ground
       adc_pinmux_positive: ADC AIN4 pin
-      adc_prescaler: Peripheral clock divided by 8
+      adc_prescaler: Peripheral clock divided by 16
       adc_reference: External reference A
       adc_resolution: 16-bit (averaging must be enabled)
     optional_signals:
@@ -523,36 +523,6 @@ drivers:
     variant: null
     clocks:
       domain_group: null
-  CALENDAR_0:
-    user_label: CALENDAR_0
-    definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::RTC::driver_config_definition::Calendar::HAL:Driver:Calendar
-    functionality: Calendar
-    api: HAL:Driver:Calendar
-    configuration:
-      rtc_arch_init_reset: true
-      rtc_arch_prescaler: Peripheral clock divided by 1024
-      rtc_cmpeo0: false
-      rtc_event_control: false
-      rtc_ovfeo: false
-      rtc_pereo0: false
-      rtc_pereo1: false
-      rtc_pereo2: false
-      rtc_pereo3: false
-      rtc_pereo4: false
-      rtc_pereo5: false
-      rtc_pereo6: false
-      rtc_pereo7: false
-    optional_signals: []
-    variant: null
-    clocks:
-      domain_group:
-        nodes:
-        - name: RTC
-          input: Generic clock generator 0
-          external: false
-          external_frequency: 0
-        configuration:
-          rtc_clk_selection: Generic clock generator 0
   TIMER_0:
     user_label: TIMER_0
     definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::TC7::driver_config_definition::Timer::HAL:Driver:Timer

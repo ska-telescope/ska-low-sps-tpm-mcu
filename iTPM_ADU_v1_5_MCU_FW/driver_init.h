@@ -30,8 +30,6 @@ extern "C" {
 #include <hal_spi_m_sync.h>
 
 #include <hal_delay.h>
-
-#include <hal_calendar.h>
 #include <hal_timer.h>
 #include <hpl_tc_base.h>
 
@@ -44,8 +42,7 @@ extern struct usart_sync_descriptor USART_0;
 extern struct usart_sync_descriptor USART_XO3;
 extern struct spi_m_sync_descriptor SPI_0;
 
-extern struct calendar_descriptor CALENDAR_0;
-extern struct timer_descriptor    TIMER_0;
+extern struct timer_descriptor TIMER_0;
 
 extern struct wdt_descriptor WDT_0;
 
@@ -64,9 +61,6 @@ void SPI_0_CLOCK_init(void);
 void SPI_0_init(void);
 
 void delay_driver_init(void);
-
-void CALENDAR_0_CLOCK_init(void);
-void CALENDAR_0_init(void);
 
 void WDT_0_CLOCK_init(void);
 void WDT_0_init(void);

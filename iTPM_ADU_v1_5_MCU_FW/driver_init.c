@@ -36,8 +36,6 @@ struct usart_sync_descriptor USART_0;
 
 struct usart_sync_descriptor USART_XO3;
 
-struct calendar_descriptor CALENDAR_0;
-
 struct wdt_descriptor WDT_0;
 
 /**
@@ -252,18 +250,6 @@ void delay_driver_init(void)
 	delay_init(SysTick);
 }
 
-void CALENDAR_0_CLOCK_init(void)
-{
-	_pm_enable_bus_clock(PM_BUS_APBA, RTC);
-	_gclk_enable_channel(RTC_GCLK_ID, CONF_GCLK_RTC_SRC);
-}
-
-void CALENDAR_0_init(void)
-{
-	CALENDAR_0_CLOCK_init();
-	calendar_init(&CALENDAR_0, RTC);
-}
-
 /**
  * \brief Timer initialization function
  *
@@ -448,8 +434,6 @@ void system_init(void)
 	SPI_0_init();
 
 	delay_driver_init();
-
-	CALENDAR_0_init();
 
 	TIMER_0_init();
 
