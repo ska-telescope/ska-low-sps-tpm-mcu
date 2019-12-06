@@ -1,3 +1,13 @@
+#define itpm_cpld_wb_c2c0  	0x00000000	//RW
+#define itpm_cpld_wb_c2c0_M	0xFFFFFFFF
+#define itpm_cpld_wb_c2c0_R	0x0
+#define itpm_cpld_wb_c2c0_D	"Chip 2 Chip Bridge 0"
+
+#define itpm_cpld_wb_c2c1  	0x10000000	//RW
+#define itpm_cpld_wb_c2c1_M	0xFFFFFFFF
+#define itpm_cpld_wb_c2c1_R	0x0
+#define itpm_cpld_wb_c2c1_D	"Chip 2 Chip Bridge 1"
+
 #define itpm_cpld_spi_address  	0x20000000	//RW
 #define itpm_cpld_spi_address_M	0x0000FFFF
 #define itpm_cpld_spi_address_R	0x0
@@ -28,13 +38,13 @@
 #define itpm_cpld_spi_cmd_R	0x0
 #define itpm_cpld_spi_cmd_D	"Missing Description"
 
-#define itpm_cpld_spi_cmd_start  	0x20000014	//RW
 #define itpm_cpld_spi_cmd_start_M	0x00000001
+#define itpm_cpld_spi_cmd_start_B	0
 #define itpm_cpld_spi_cmd_start_R	0x0
 #define itpm_cpld_spi_cmd_start_D	"Missing Description"
 
-#define itpm_cpld_spi_cmd_rnw  	0x20000014	//RW
 #define itpm_cpld_spi_cmd_rnw_M	0x00000002
+#define itpm_cpld_spi_cmd_rnw_B	1
 #define itpm_cpld_spi_cmd_rnw_R	0x0
 #define itpm_cpld_spi_cmd_rnw_D	"Missing Description"
 
@@ -48,6 +58,16 @@
 #define itpm_cpld_regfile_master_rst_R	0x00000000
 #define itpm_cpld_regfile_master_rst_D	"Global XO3 Reset"
 
+#define itpm_cpld_regfile_user_reg0  	0x30000010	//RW
+#define itpm_cpld_regfile_user_reg0_M	0xffffffff
+#define itpm_cpld_regfile_user_reg0_R	0xdeadbeef
+#define itpm_cpld_regfile_user_reg0_D	"User Register0"
+
+#define itpm_cpld_regfile_user_reg1  	0x30000014	//RW
+#define itpm_cpld_regfile_user_reg1_M	0xffffffff
+#define itpm_cpld_regfile_user_reg1_R	0x00000000
+#define itpm_cpld_regfile_user_reg1_D	"User Register1"
+
 #define itpm_cpld_regfile_ena_stream  	0x30000018	//RW
 #define itpm_cpld_regfile_ena_stream_M	0x00000001
 #define itpm_cpld_regfile_ena_stream_R	0x00000000
@@ -58,65 +78,65 @@
 #define itpm_cpld_regfile_pll_R	0x0
 #define itpm_cpld_regfile_pll_D	"Missing description"
 
-#define itpm_cpld_regfile_pll_resetn  	0x30000020	//RW
-#define itpm_cpld_regfile_pll_resetn_M	0x00000001
-#define itpm_cpld_regfile_pll_resetn_R	0x00000000
-#define itpm_cpld_regfile_pll_resetn_D	"PLL AD9528 and AD9550 Reset"
-
-#define itpm_cpld_regfile_pll_status  	0x30000020	//RW
 #define itpm_cpld_regfile_pll_status_M	0x00000030
+#define itpm_cpld_regfile_pll_status_B	4
 #define itpm_cpld_regfile_pll_status_R	0x00000000
 #define itpm_cpld_regfile_pll_status_D	"PLL AD9528 Status"
+
+#define itpm_cpld_regfile_pll_resetn_M	0x00000001
+#define itpm_cpld_regfile_pll_resetn_B	0
+#define itpm_cpld_regfile_pll_resetn_R	0x00000000
+#define itpm_cpld_regfile_pll_resetn_D	"PLL AD9528 and AD9550 Reset"
 
 #define itpm_cpld_regfile_c2c_pll  	0x30000028	//RW
 #define itpm_cpld_regfile_c2c_pll_M	0xFFFFFFFF
 #define itpm_cpld_regfile_c2c_pll_R	0x0
 #define itpm_cpld_regfile_c2c_pll_D	"Missing description"
 
-#define itpm_cpld_regfile_c2c_pll_phasedir  	0x30000028	//RW
+#define itpm_cpld_regfile_c2c_pll_phasestep_M	0x00000001
+#define itpm_cpld_regfile_c2c_pll_phasestep_B	0
+#define itpm_cpld_regfile_c2c_pll_phasestep_R	0x00000000
+#define itpm_cpld_regfile_c2c_pll_phasestep_D	"c2c PLL Phase Step"
+
 #define itpm_cpld_regfile_c2c_pll_phasedir_M	0x00000010
+#define itpm_cpld_regfile_c2c_pll_phasedir_B	4
 #define itpm_cpld_regfile_c2c_pll_phasedir_R	0x00000000
 #define itpm_cpld_regfile_c2c_pll_phasedir_D	"c2c PLL Phase Direction"
 
-#define itpm_cpld_regfile_c2c_pll_phasesel  	0x30000028	//RW
 #define itpm_cpld_regfile_c2c_pll_phasesel_M	0x00000300
+#define itpm_cpld_regfile_c2c_pll_phasesel_B	8
 #define itpm_cpld_regfile_c2c_pll_phasesel_R	0x00000000
 #define itpm_cpld_regfile_c2c_pll_phasesel_D	"c2c PLL Phase Select"
-
-#define itpm_cpld_regfile_c2c_pll_phasestep  	0x30000028	//RW
-#define itpm_cpld_regfile_c2c_pll_phasestep_M	0x00000001
-#define itpm_cpld_regfile_c2c_pll_phasestep_R	0x00000000
-#define itpm_cpld_regfile_c2c_pll_phasestep_D	"c2c PLL Phase Step"
 
 #define itpm_cpld_regfile_c2c_ctrl  	0x3000002C	//RW
 #define itpm_cpld_regfile_c2c_ctrl_M	0xFFFFFFFF
 #define itpm_cpld_regfile_c2c_ctrl_R	0x0
 #define itpm_cpld_regfile_c2c_ctrl_D	"Missing description"
 
-#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable  	0x3000002C	//RW
-#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable_M	0x00000002
-#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable_R	0x00000000
-#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable_D	"Enable C2C Burst"
-
-#define itpm_cpld_regfile_c2c_ctrl_mm_read_stream  	0x3000002C	//RW
 #define itpm_cpld_regfile_c2c_ctrl_mm_read_stream_M	0x00000001
+#define itpm_cpld_regfile_c2c_ctrl_mm_read_stream_B	0
 #define itpm_cpld_regfile_c2c_ctrl_mm_read_stream_R	0x00000000
 #define itpm_cpld_regfile_c2c_ctrl_mm_read_stream_D	"Enable C2C Management"
+
+#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable_M	0x00000002
+#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable_B	1
+#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable_R	0x00000000
+#define itpm_cpld_regfile_c2c_ctrl_mm_burst_enable_D	"Enable C2C Burst"
 
 #define itpm_cpld_regfile_eth10ge  	0x30000030	//RW
 #define itpm_cpld_regfile_eth10ge_M	0xFFFFFFFF
 #define itpm_cpld_regfile_eth10ge_R	0x0
 #define itpm_cpld_regfile_eth10ge_D	"Missing description"
 
-#define itpm_cpld_regfile_eth10ge_psnt  	0x30000030	//RW
-#define itpm_cpld_regfile_eth10ge_psnt_M	0x00000003
-#define itpm_cpld_regfile_eth10ge_psnt_R	0x00000000
-#define itpm_cpld_regfile_eth10ge_psnt_D	"10GE QSFP Present"
-
-#define itpm_cpld_regfile_eth10ge_lock  	0x30000030	//RW
 #define itpm_cpld_regfile_eth10ge_lock_M	0x00000030
+#define itpm_cpld_regfile_eth10ge_lock_B	4
 #define itpm_cpld_regfile_eth10ge_lock_R	0x00000000
 #define itpm_cpld_regfile_eth10ge_lock_D	"PLL AD9550 Lock"
+
+#define itpm_cpld_regfile_eth10ge_psnt_M	0x00000003
+#define itpm_cpld_regfile_eth10ge_psnt_B	0
+#define itpm_cpld_regfile_eth10ge_psnt_R	0x00000000
+#define itpm_cpld_regfile_eth10ge_psnt_D	"10GE QSFP Present"
 
 #define itpm_cpld_regfile_test_error  	0x30000040	//RW
 #define itpm_cpld_regfile_test_error_M	0x00000030
@@ -138,23 +158,23 @@
 #define itpm_cpld_regfile_xilinx_R	0x0
 #define itpm_cpld_regfile_xilinx_D	"Missing description"
 
-#define itpm_cpld_regfile_xilinx_init  	0x30000060	//R
-#define itpm_cpld_regfile_xilinx_init_M	0x00000300
-#define itpm_cpld_regfile_xilinx_init_R	0x00000000
-#define itpm_cpld_regfile_xilinx_init_D	"Xilinx Init"
-
-#define itpm_cpld_regfile_xilinx_program  	0x30000060	//RW
-#define itpm_cpld_regfile_xilinx_program_M	0x00000030
-#define itpm_cpld_regfile_xilinx_program_R	0x00000003
-#define itpm_cpld_regfile_xilinx_program_D	"Xilinx Program"
-
-#define itpm_cpld_regfile_xilinx_reset  	0x30000060	//RW
 #define itpm_cpld_regfile_xilinx_reset_M	0x00000001
+#define itpm_cpld_regfile_xilinx_reset_B	0
 #define itpm_cpld_regfile_xilinx_reset_R	0x00000000
 #define itpm_cpld_regfile_xilinx_reset_D	"Xilinx Reset"
 
-#define itpm_cpld_regfile_xilinx_done  	0x30000060	//R
+#define itpm_cpld_regfile_xilinx_program_M	0x00000030
+#define itpm_cpld_regfile_xilinx_program_B	4
+#define itpm_cpld_regfile_xilinx_program_R	0x00000003
+#define itpm_cpld_regfile_xilinx_program_D	"Xilinx Program"
+
+#define itpm_cpld_regfile_xilinx_init_M	0x00000300
+#define itpm_cpld_regfile_xilinx_init_B	8
+#define itpm_cpld_regfile_xilinx_init_R	0x00000000
+#define itpm_cpld_regfile_xilinx_init_D	"Xilinx Init"
+
 #define itpm_cpld_regfile_xilinx_done_M	0x00003000
+#define itpm_cpld_regfile_xilinx_done_B	12
 #define itpm_cpld_regfile_xilinx_done_R	0x00000000
 #define itpm_cpld_regfile_xilinx_done_D	"Xilinx Done"
 
@@ -163,13 +183,13 @@
 #define itpm_cpld_regfile_amp_R	0x0
 #define itpm_cpld_regfile_amp_D	"Missing description"
 
-#define itpm_cpld_regfile_amp_fa  	0x30000070	//RW
 #define itpm_cpld_regfile_amp_fa_M	0x00000001
+#define itpm_cpld_regfile_amp_fa_B	0
 #define itpm_cpld_regfile_amp_fa_R	0x00000000
 #define itpm_cpld_regfile_amp_fa_D	"AMP Fast Attack"
 
-#define itpm_cpld_regfile_amp_pmode  	0x30000070	//RW
 #define itpm_cpld_regfile_amp_pmode_M	0x00000002
+#define itpm_cpld_regfile_amp_pmode_B	1
 #define itpm_cpld_regfile_amp_pmode_R	0x00000000
 #define itpm_cpld_regfile_amp_pmode_D	"AMP Power Mode"
 
@@ -178,30 +198,30 @@
 #define itpm_cpld_regfile_enable_R	0x0
 #define itpm_cpld_regfile_enable_D	"Missing description"
 
-#define itpm_cpld_regfile_enable_fpga  	0x30000080	//RW
-#define itpm_cpld_regfile_enable_fpga_M	0x00000004
-#define itpm_cpld_regfile_enable_fpga_R	0x00000000
-#define itpm_cpld_regfile_enable_fpga_D	"Enable FPGA"
-
-#define itpm_cpld_regfile_enable_adc  	0x30000080	//RW
 #define itpm_cpld_regfile_enable_adc_M	0x00000001
+#define itpm_cpld_regfile_enable_adc_B	0
 #define itpm_cpld_regfile_enable_adc_R	0x00000000
 #define itpm_cpld_regfile_enable_adc_D	"Enable ADC"
 
-#define itpm_cpld_regfile_enable_fe  	0x30000080	//RW
 #define itpm_cpld_regfile_enable_fe_M	0x00000002
+#define itpm_cpld_regfile_enable_fe_B	1
 #define itpm_cpld_regfile_enable_fe_R	0x00000000
 #define itpm_cpld_regfile_enable_fe_D	"Enable Front End"
 
-#define itpm_cpld_regfile_enable_vga  	0x30000080	//RW
-#define itpm_cpld_regfile_enable_vga_M	0x00000010
-#define itpm_cpld_regfile_enable_vga_R	0x00000000
-#define itpm_cpld_regfile_enable_vga_D	"Enable VGA"
+#define itpm_cpld_regfile_enable_fpga_M	0x00000004
+#define itpm_cpld_regfile_enable_fpga_B	2
+#define itpm_cpld_regfile_enable_fpga_R	0x00000000
+#define itpm_cpld_regfile_enable_fpga_D	"Enable FPGA"
 
-#define itpm_cpld_regfile_enable_sysr  	0x30000080	//RW
 #define itpm_cpld_regfile_enable_sysr_M	0x00000008
+#define itpm_cpld_regfile_enable_sysr_B	3
 #define itpm_cpld_regfile_enable_sysr_R	0x00000000
 #define itpm_cpld_regfile_enable_sysr_D	"Enable SYSR"
+
+#define itpm_cpld_regfile_enable_vga_M	0x00000010
+#define itpm_cpld_regfile_enable_vga_B	4
+#define itpm_cpld_regfile_enable_vga_R	0x00000000
+#define itpm_cpld_regfile_enable_vga_D	"Enable VGA"
 
 #define itpm_cpld_regfile_ad_pwdn  	0x30000090	//RW
 #define itpm_cpld_regfile_ad_pwdn_M	0x00000001
@@ -278,40 +298,55 @@
 #define itpm_cpld_regfile_tmp_present_R	0x00000000
 #define itpm_cpld_regfile_tmp_present_D	"TMP Present"
 
-#define itpm_cpld_regfile_spi_cs_ow  	0x30000200	//RW
+#define itpm_cpld_regfile_spi_cs  	0x30000200	//RW
+#define itpm_cpld_regfile_spi_cs_M	0xFFFFFFFF
+#define itpm_cpld_regfile_spi_cs_R	0x0
+#define itpm_cpld_regfile_spi_cs_D	"Missing description"
+
+#define itpm_cpld_regfile_spi_cs_cs0_M	0x00010000
+#define itpm_cpld_regfile_spi_cs_cs0_B	16
+#define itpm_cpld_regfile_spi_cs_cs0_R	0x00000000
+#define itpm_cpld_regfile_spi_cs_cs0_D	"SPI CS0"
+
 #define itpm_cpld_regfile_spi_cs_ow_M	0x00000001
-#define itpm_cpld_regfile_spi_cs_ow_R	0x00000000
+#define itpm_cpld_regfile_spi_cs_ow_B	0
+#define itpm_cpld_regfile_spi_cs_ow_R	0x00000001
 #define itpm_cpld_regfile_spi_cs_ow_D	"SPI CS OW"
 
-#define itpm_cpld_regfile_spi_cs0  	0x30000204	//RW
-#define itpm_cpld_regfile_spi_cs0_M	0x00000001
-#define itpm_cpld_regfile_spi_cs0_R	0x00000000
-#define itpm_cpld_regfile_spi_cs0_D	"SPI CS"
-
-#define itpm_cpld_regfile_spi_tx_byte  	0x30000208	//RW
-#define itpm_cpld_regfile_spi_tx_byte_M	0x000007ff
+#define itpm_cpld_regfile_spi_tx_byte  	0x30000204	//RW
+#define itpm_cpld_regfile_spi_tx_byte_M	0x01ffffff
 #define itpm_cpld_regfile_spi_tx_byte_R	0x00000000
 #define itpm_cpld_regfile_spi_tx_byte_D	"SPI TX Byte"
 
-#define itpm_cpld_regfile_spi_rx_byte  	0x3000020C	//R
-#define itpm_cpld_regfile_spi_rx_byte_M	0x000007ff
+#define itpm_cpld_regfile_spi_rx_byte  	0x30000208	//R
+#define itpm_cpld_regfile_spi_rx_byte_M	0x01ffffff
 #define itpm_cpld_regfile_spi_rx_byte_R	0x00000000
 #define itpm_cpld_regfile_spi_rx_byte_D	"SPI RX Byte"
 
-#define itpm_cpld_regfile_spi_tx_buf_len  	0x30000210	//R
-#define itpm_cpld_regfile_spi_tx_buf_len_M	0x0000ffff
+#define itpm_cpld_regfile_spi_tx_buf_len  	0x3000020C	//R
+#define itpm_cpld_regfile_spi_tx_buf_len_M	0x01ffffff
 #define itpm_cpld_regfile_spi_tx_buf_len_R	0x00000000
 #define itpm_cpld_regfile_spi_tx_buf_len_D	"SPI TX Buffer length"
 
-#define itpm_cpld_regfile_spi_rx_buf_len  	0x30000214	//R
-#define itpm_cpld_regfile_spi_rx_buf_len_M	0x0000ffff
+#define itpm_cpld_regfile_spi_rx_buf_len  	0x30000210	//R
+#define itpm_cpld_regfile_spi_rx_buf_len_M	0x01ffffff
 #define itpm_cpld_regfile_spi_rx_buf_len_R	0x00000000
 #define itpm_cpld_regfile_spi_rx_buf_len_D	"SPI RX Buffer length"
 
-#define itpm_cpld_regfile_spi_fifo_addr  	0x30000218	//RW
-#define itpm_cpld_regfile_spi_fifo_addr_M	0x000007ff
+#define itpm_cpld_regfile_spi_fifo_addr  	0x30000214	//RW
+#define itpm_cpld_regfile_spi_fifo_addr_M	0x01ffffff
 #define itpm_cpld_regfile_spi_fifo_addr_R	0x00000000
 #define itpm_cpld_regfile_spi_fifo_addr_D	"SPI Fifo Address"
+
+#define itpm_cpld_regfile_spi_mux  	0x30000218	//RW
+#define itpm_cpld_regfile_spi_mux_M	0x00000003
+#define itpm_cpld_regfile_spi_mux_R	0x00000000
+#define itpm_cpld_regfile_spi_mux_D	"SPI Mux"
+
+#define itpm_cpld_regfile_spi_route  	0x3000021C	//RW
+#define itpm_cpld_regfile_spi_route_M	0x00000001
+#define itpm_cpld_regfile_spi_route_R	0x00000000
+#define itpm_cpld_regfile_spi_route_D	"SPI Routing to Slave Serial"
 
 #define itpm_cpld_regfile_eth_mac_l  	0x30000300	//R
 #define itpm_cpld_regfile_eth_mac_l_M	0xffffffff
@@ -346,47 +381,127 @@
 #define itpm_cpld_i2c_command  	0x40000000	//RW
 #define itpm_cpld_i2c_command_M	0xFFFFFFFF
 #define itpm_cpld_i2c_command_R	0x0
-#define itpm_cpld_i2c_command_D	"Missing Description"
+#define itpm_cpld_i2c_command_D	"Missing description"
 
-#define itpm_cpld_i2c_command_address  		0x40000000	//RW
-#define itpm_cpld_i2c_command_address_BM	0x7F
-#define itpm_cpld_i2c_command_address_BO	0
-#define itpm_cpld_i2c_command_address_D		"Missing Description"
+#define itpm_cpld_i2c_command_wrbyte_M	0x00000f00
+#define itpm_cpld_i2c_command_wrbyte_B	8
+#define itpm_cpld_i2c_command_wrbyte_R	0x0
+#define itpm_cpld_i2c_command_wrbyte_D	"Number of byte to write"
 
-#define itpm_cpld_i2c_command_wrbyte  		0x40000000	//RW
-#define itpm_cpld_i2c_command_wrbyte_BM		0xF00
-#define itpm_cpld_i2c_command_wrbyte_BO		8
-#define itpm_cpld_i2c_command_wrbyte_D		"Missing Description"
+#define itpm_cpld_i2c_command_phyadd_M	0x0000007f
+#define itpm_cpld_i2c_command_phyadd_B	0
+#define itpm_cpld_i2c_command_phyadd_R	0x0
+#define itpm_cpld_i2c_command_phyadd_D	"Physical Address"
 
-#define itpm_cpld_i2c_command_rdbbyte  		0x40000000	//RW
-#define itpm_cpld_i2c_command_rdbbyte_BM	0xF000
-#define itpm_cpld_i2c_command_rdbbyte_BO	12
-#define itpm_cpld_i2c_command_rdbbyte_D		"Missing Description"
+#define itpm_cpld_i2c_command_mux_M	0x00030000
+#define itpm_cpld_i2c_command_mux_B	16
+#define itpm_cpld_i2c_command_mux_R	0x0
+#define itpm_cpld_i2c_command_mux_D	"Output mux control"
 
-#define itpm_cpld_i2c_command_mux  			0x40000000	//RW
-#define itpm_cpld_i2c_command_mux_BM		0x30000
-#define itpm_cpld_i2c_command_mux_BO		16
-#define itpm_cpld_i2c_command_mux_D			"Missing Description"
+#define itpm_cpld_i2c_command_rdbyte_M	0x0000f000
+#define itpm_cpld_i2c_command_rdbyte_B	12
+#define itpm_cpld_i2c_command_rdbyte_R	0x0
+#define itpm_cpld_i2c_command_rdbyte_D	"Number of byte to read"
 
 #define itpm_cpld_i2c_transmit  	0x40000004	//RW
 #define itpm_cpld_i2c_transmit_M	0xFFFFFFFF
 #define itpm_cpld_i2c_transmit_R	0x0
-#define itpm_cpld_i2c_transmit_D	"Missing Description"
+#define itpm_cpld_i2c_transmit_D	"Data to be transmitted"
 
-#define itpm_cpld_i2c_receive  	0x40000008	//RW
+#define itpm_cpld_i2c_receive  	0x40000008	//R
 #define itpm_cpld_i2c_receive_M	0xFFFFFFFF
 #define itpm_cpld_i2c_receive_R	0x0
-#define itpm_cpld_i2c_receive_D	"Missing Description"
+#define itpm_cpld_i2c_receive_D	"Data received"
 
 #define itpm_cpld_i2c_status  	0x4000000C	//RW
-#define itpm_cpld_i2c_status_M	0x00000002
+#define itpm_cpld_i2c_status_M	0xFFFFFFFF
 #define itpm_cpld_i2c_status_R	0x0
-#define itpm_cpld_i2c_status_D	"Missing Description"
+#define itpm_cpld_i2c_status_D	"Missing description"
+
+#define itpm_cpld_i2c_status_ack_error_M	0x00000002
+#define itpm_cpld_i2c_status_ack_error_B	1
+#define itpm_cpld_i2c_status_ack_error_R	0x0
+#define itpm_cpld_i2c_status_ack_error_D	"Acknowledge error"
+
+#define itpm_cpld_i2c_status_busy_M	0x00000001
+#define itpm_cpld_i2c_status_busy_B	0
+#define itpm_cpld_i2c_status_busy_R	0x0
+#define itpm_cpld_i2c_status_busy_D	"Busy"
+
+#define itpm_cpld_i2c_irq  	0x40000010	//RW
+#define itpm_cpld_i2c_irq_M	0xFFFFFFFF
+#define itpm_cpld_i2c_irq_R	0x0
+#define itpm_cpld_i2c_irq_D	"Missing description"
+
+#define itpm_cpld_i2c_irq_ack_error_M	0x00000002
+#define itpm_cpld_i2c_irq_ack_error_B	1
+#define itpm_cpld_i2c_irq_ack_error_R	0x0
+#define itpm_cpld_i2c_irq_ack_error_D	"IRQ Acknowledge error"
+
+#define itpm_cpld_i2c_irq_done_M	0x00000001
+#define itpm_cpld_i2c_irq_done_B	0
+#define itpm_cpld_i2c_irq_done_R	0x0
+#define itpm_cpld_i2c_irq_done_D	"IRQ Done"
+
+#define itpm_cpld_i2c_irq_en  	0x40000014	//RW
+#define itpm_cpld_i2c_irq_en_M	0x00000003
+#define itpm_cpld_i2c_irq_en_R	0x0
+#define itpm_cpld_i2c_irq_en_D	"IRQ Enables"
 
 #define itpm_cpld_i2c_update_network_config  	0x40000018	//RW
 #define itpm_cpld_i2c_update_network_config_M	0x00000001
 #define itpm_cpld_i2c_update_network_config_R	0x0
-#define itpm_cpld_i2c_update_network_config_D	"Missing Description"
+#define itpm_cpld_i2c_update_network_config_D	"Update network config"
+
+#define itpm_cpld_i2c_mac_hi  	0x40000020	//RW
+#define itpm_cpld_i2c_mac_hi_M	0x0000ffff
+#define itpm_cpld_i2c_mac_hi_R	0x0
+#define itpm_cpld_i2c_mac_hi_D	"MAC high part"
+
+#define itpm_cpld_i2c_mac_lo  	0x40000024	//RW
+#define itpm_cpld_i2c_mac_lo_M	0xffffffff
+#define itpm_cpld_i2c_mac_lo_R	0x0
+#define itpm_cpld_i2c_mac_lo_D	"MAC low part"
+
+#define itpm_cpld_i2c_ip  	0x40000028	//RW
+#define itpm_cpld_i2c_ip_M	0xffffffff
+#define itpm_cpld_i2c_ip_R	0x0
+#define itpm_cpld_i2c_ip_D	"IP"
+
+#define itpm_cpld_i2c_netmask  	0x4000002C	//RW
+#define itpm_cpld_i2c_netmask_M	0xffffffff
+#define itpm_cpld_i2c_netmask_R	0x0
+#define itpm_cpld_i2c_netmask_D	"Netmask"
+
+#define itpm_cpld_i2c_gateway  	0x40000030	//RW
+#define itpm_cpld_i2c_gateway_M	0xffffffff
+#define itpm_cpld_i2c_gateway_R	0x0
+#define itpm_cpld_i2c_gateway_D	"Gateway"
+
+#define itpm_cpld_i2c_key  	0x40000034	//R
+#define itpm_cpld_i2c_key_M	0x00ffffff
+#define itpm_cpld_i2c_key_R	0x0
+#define itpm_cpld_i2c_key_D	"Key"
+
+#define itpm_cpld_i2c_password_lo  	0x40000038	//RW
+#define itpm_cpld_i2c_password_lo_M	0xffffffff
+#define itpm_cpld_i2c_password_lo_R	0x0
+#define itpm_cpld_i2c_password_lo_D	"Password low part"
+
+#define itpm_cpld_i2c_password  	0x4000003C	//RW
+#define itpm_cpld_i2c_password_M	0xFFFFFFFF
+#define itpm_cpld_i2c_password_R	0x0
+#define itpm_cpld_i2c_password_D	"Missing description"
+
+#define itpm_cpld_i2c_password_hi_M	0x0000ffff
+#define itpm_cpld_i2c_password_hi_B	0
+#define itpm_cpld_i2c_password_hi_R	0x0
+#define itpm_cpld_i2c_password_hi_D	"Password high part"
+
+#define itpm_cpld_i2c_password_ok_M	0x00010000
+#define itpm_cpld_i2c_password_ok_B	16
+#define itpm_cpld_i2c_password_ok_R	0x0
+#define itpm_cpld_i2c_password_ok_D	"Password OK"
 
 #define itpm_cpld_smap_global  	0x50000000	//RW
 #define itpm_cpld_smap_global_M	0xFFFFFFFF
@@ -407,41 +522,6 @@
 #define itpm_cpld_smap_wr_fifo_M	0xFFFFFFFF
 #define itpm_cpld_smap_wr_fifo_R	0x0
 #define itpm_cpld_smap_wr_fifo_D	"Missing Description"
-
-#define itpm_cpld_flash_cmd  	0x60000000	//RW
-#define itpm_cpld_flash_cmd_M	0xFFFFFFFF
-#define itpm_cpld_flash_cmd_R	0x0
-#define itpm_cpld_flash_cmd_D	"Missing Description"
-
-#define itpm_cpld_flash_add  	0x60000004	//RW
-#define itpm_cpld_flash_add_M	0xFFFFFFFF
-#define itpm_cpld_flash_add_R	0x0
-#define itpm_cpld_flash_add_D	"Missing Description"
-
-#define itpm_cpld_flash_num  	0x60000008	//RW
-#define itpm_cpld_flash_num_M	0xFFFFFFFF
-#define itpm_cpld_flash_num_R	0x0
-#define itpm_cpld_flash_num_D	"Missing Description"
-
-#define itpm_cpld_flash_bank  	0x6000000C	//RW
-#define itpm_cpld_flash_bank_M	0xFFFFFFFF
-#define itpm_cpld_flash_bank_R	0x0
-#define itpm_cpld_flash_bank_D	"Missing Description"
-
-#define itpm_cpld_flash_busy  	0x60000010	//RW
-#define itpm_cpld_flash_busy_M	0xFFFFFFFF
-#define itpm_cpld_flash_busy_R	0x0
-#define itpm_cpld_flash_busy_D	"Missing Description"
-
-#define itpm_cpld_flash_wr_data  	0x60010000	//RW
-#define itpm_cpld_flash_wr_data_M	0xFFFFFFFF
-#define itpm_cpld_flash_wr_data_R	0x0
-#define itpm_cpld_flash_wr_data_D	"Missing Description"
-
-#define itpm_cpld_flash_rd_data  	0x60020000	//RW
-#define itpm_cpld_flash_rd_data_M	0xFFFFFFFF
-#define itpm_cpld_flash_rd_data_R	0x0
-#define itpm_cpld_flash_rd_data_D	"Missing Description"
 
 #define itpm_cpld_uart_ctrl_rnw  	0x70000000	//RW
 #define itpm_cpld_uart_ctrl_rnw_M	0x00000001
@@ -538,10 +618,10 @@
 #define itpm_cpld_bram_cpu_R	0x0
 #define itpm_cpld_bram_cpu_D	"CPU BRAM"
 
-#define itpm_cpld_confspi  	0xA0000000	//RW
-#define itpm_cpld_confspi_M	0xFFFFFFFF
-#define itpm_cpld_confspi_R	0x0
-#define itpm_cpld_confspi_D	"SPI Configuration Data Buffer"
+#define itpm_cpld_confspi_rxtx_buffer  	0xA0000000	//RW
+#define itpm_cpld_confspi_rxtx_buffer_M	0xFFFFFFFF
+#define itpm_cpld_confspi_rxtx_buffer_R	0x0
+#define itpm_cpld_confspi_rxtx_buffer_D	"TX-RX Data Buffer"
 
 #define itpm_cpld_fespi_serio_reg0  	0xB0000000	//R
 #define itpm_cpld_fespi_serio_reg0_M	0xFFFFFFFF
@@ -568,15 +648,15 @@
 #define itpm_cpld_fespi_command_R	0x0
 #define itpm_cpld_fespi_command_D	"Serial Command and Mux"
 
-#define itpm_cpld_fespi_command_mux  	0xB0000010	//RW
-#define itpm_cpld_fespi_command_mux_M	0x00000004
-#define itpm_cpld_fespi_command_mux_R	0x0
-#define itpm_cpld_fespi_command_mux_D	"0x1 = Send to FE1- 0x0 = Send To FE0"
-
-#define itpm_cpld_fespi_command_rw  	0xB0000010	//RW
 #define itpm_cpld_fespi_command_rw_M	0x00000003
+#define itpm_cpld_fespi_command_rw_B	0
 #define itpm_cpld_fespi_command_rw_R	0x0
 #define itpm_cpld_fespi_command_rw_D	"0x1 = Read - 0x3 = Write"
+
+#define itpm_cpld_fespi_command_mux_M	0x00000004
+#define itpm_cpld_fespi_command_mux_B	2
+#define itpm_cpld_fespi_command_mux_R	0x0
+#define itpm_cpld_fespi_command_mux_D	"0x1 = Send to FE1- 0x0 = Send To FE0"
 
 #define itpm_cpld_intc_status  	0xC0000000	//R
 #define itpm_cpld_intc_status_M	0x00000fff
