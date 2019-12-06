@@ -234,6 +234,41 @@ XO3_Read(
   return success;
 } // XO3_Read
 
+XO3_BitfieldExtract(
+	uint32_t RegBA,
+	uint32_t RegMask,
+	uint32_t shift,
+	uint32_t* value
+)
+{
+	int success;
+	uint32_t tmp;	
+	
+	success = XO3_Read(RegBA, &tmp);	
+	*value = (tmp & RegMask) >> shift;
+	
+	return success;
+}
+
+XO3_BitfieldRMWrite(
+uint32_t RegBA,
+uint32_t RegMask,
+uint32_t shift,
+uint32_t value
+)
+{
+	int success;
+	uint32_t tmp;
+	
+	success = XO3_Read(RegBA, &tmp);
+	tmp =& ~RegMask	
+	tmp += (value << shift);
+		
+	XO3_WriteByte(RegBA, tmp);
+	
+	return success;
+}
+
 /*
 int
 XO3_Address(
