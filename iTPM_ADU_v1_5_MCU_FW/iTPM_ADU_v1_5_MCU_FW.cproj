@@ -194,7 +194,7 @@
         <documentation help="" />
         <offline-documentation help="" />
         <dependencies>
-          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.26.0" />
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.38.0" />
         </dependencies>
       </framework-data>
     </AsfFrameworkConfig>
@@ -451,6 +451,9 @@
     <Compile Include="atmel_start_pins.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="BoardStausCodes.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="Config\hpl_adc_config.h">
       <SubType>compile</SubType>
     </Compile>
@@ -503,6 +506,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="examples\driver_examples.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ExtFlash.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ExtFlash.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hal\include\hal_adc_async.h">

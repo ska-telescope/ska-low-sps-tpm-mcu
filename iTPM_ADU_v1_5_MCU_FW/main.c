@@ -57,6 +57,8 @@ uint32_t ADT7408_temp_raw;
 float ADT7408_temp;
 bool ADT7408Regs[3];
 uint32_t pollingHz;
+uint32_t reg_ThresholdEnable = 0;
+uint16_t reg_ThresholdVals [2][17];
 
 /* -----------------------------------*/
 
@@ -66,7 +68,7 @@ static void ADCsync() {
 	while (ADC->STATUS.bit.SYNCBUSY == 1); //Just wait till the ADC is free
 }
 
-void writeDataBlock(){
+void exchangeDataBlock(){
 	framWrite(FRAM_ADC_SW_AVDD1,			adcArrgh[1][0]);
 	framWrite(FRAM_ADC_SW_AVDD2,			adcArrgh[1][1]);
 	framWrite(FRAM_ADC_AVDD3,				adcArrgh[1][2]);
@@ -83,6 +85,19 @@ void writeDataBlock(){
 	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	adcArrgh[1][13]);
 	
 	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
+	
+	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
+	if (reg_ThresholdEnable && 0x80000000) {
+		int x = 0;
+		for (uint32_t i = FRAM_ALARM_THR_SW_AVDD1; i < 0x1D8; i += 4){
+			uint32_t temp;
+			framRead(i, &temp);
+			reg_ThresholdVals[0][x] = (temp && 0xFFFF); // High Threshold
+			reg_ThresholdVals[1][x] = (temp && 0xFFFF0000) >> 16; // Low Threshold
+			x++;
+		}
+	}
+	
 }
 
 
@@ -200,7 +215,7 @@ int main(void)
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
 
 		TWIdataBlock();
-		writeDataBlock();
+		exchangeDataBlock();
 
 		delay_ms((uint16_t)pollingNew);
 	}

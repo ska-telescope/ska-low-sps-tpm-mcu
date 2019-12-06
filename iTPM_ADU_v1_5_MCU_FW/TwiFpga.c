@@ -49,7 +49,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	}
 	XO3_Read(itpm_cpld_i2c_receive, &dataIN);
 	
-	if (byte2write > 1) { // Chiedere ad ale di invertire le letture
+	if (byte2read > 1) { // Chiedere ad ale di invertire le letture
 		tempbyte0 = dataIN;
 		tempbyte1 = dataIN >> 8;
 		tempbyte2 = dataIN >> 16;
