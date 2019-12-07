@@ -5,6 +5,7 @@
  *  Author: luca
  */ 
 
+#include <ExtFlash.h>
 #include <SpiRouter.h>
 #include <atmel_start.h>
 #include "regfile.h"
@@ -47,7 +48,7 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	uint8_t rxBuffer[8];
 	memset(txBuffer, 0, 4);
 	memset(txBuffer, 0, 8);
-	address = 0x00000000;
+	uint32_t address = 0x00000000;
 	txBuffer[1] = (address >> 16) & 0xFF;
 	txBuffer[2] = (address >> 8) & 0xFF;
 	txBuffer[3] = address & 0xFF;
@@ -63,20 +64,20 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	XO3_WriteByte(itpm_cpld_regfile_spi_mux, flashid);
 
 	txBuffer[0]=0x6;  //write enable command
-	FlashSPI_Sync(0,txBuffer,rxBuffer,1)
+	FlashSPI_Sync(0,txBuffer,rxBuffer,1);
 
 	//Read bitstream lenght from flashid
 	txBuffer[0]=0x3;  //write enable command
-	FlashSPI_Sync(0,txBuffer,rxBuffer,8)
-	length=(rxBuffer[4]<<24)|(rxBuffer[5]<<16)|(rxBuffer[6]<<8)|(rxBuffer[7])
+	FlashSPI_Sync(0,txBuffer,rxBuffer,8);
+	uint32_t length=(rxBuffer[4]<<24)|(rxBuffer[5]<<16)|(rxBuffer[6]<<8)|(rxBuffer[7]);
 
 
 	//Send FastRead command to flash with CS forced to low at end of command
 	txBuffer[0]=0xb;  //write enable command
 	
-	XO3_BitfieldRMWrite(itpm_cpld_regfile_spi_cs, itpm_cpld_regfile_spi_cs_ow_M, itpm_cpld_regfile_spi_cs_ow_B, 0) //write 0 on OW flag of CS register
+	XO3_BitfieldRMWrite(itpm_cpld_regfile_spi_cs, itpm_cpld_regfile_spi_cs_ow_M, itpm_cpld_regfile_spi_cs_ow_B, 0); //write 0 on OW flag of CS register
 	//XO3_WriteByte(itpm_cpld_regfile_spi_cs_ow_M, 0);  //write 0 on OW flag of CS register
-	FlashSPI_Sync(0,txBuffer,rxBuffer,8)
+	FlashSPI_Sync(0,txBuffer,rxBuffer,8);
 
 	//set router to connect Flash out with FPGA in
 	XO3_WriteByte(itpm_cpld_regfile_spi_route, 1);  //write 1 on spi_route register
@@ -91,7 +92,7 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 // 		break;
 // 	}
 	
-	XO3_BitfieldRMWrite(itpm_cpld_regfile_spi_cs, itpm_cpld_regfile_spi_cs_ow_M, itpm_cpld_regfile_spi_cs_ow_B, 1) //write 1 on OW flag of CS register
+	XO3_BitfieldRMWrite(itpm_cpld_regfile_spi_cs, itpm_cpld_regfile_spi_cs_ow_M, itpm_cpld_regfile_spi_cs_ow_B, 1); //write 1 on OW flag of CS register
 	//XO3_WriteByte(itpm_cpld_regfile_spi_cs_ow_M ,1);  //write 1 on OW flag of CS register
 	XO3_WriteByte(itpm_cpld_regfile_spi_route, 0);  //write 0 on spi_route register
 	
@@ -108,8 +109,8 @@ void FlashSPI_WriteReg(uint8_t devicespi, uint8_t regs){
 	FlashSPI_Sync(devicespi, txBuffer, &cmd, 1);
 }
 
-void FlashSPI_ReadReg(uint8_t devicespi, uint8_t regs){
-}
+// void FlashSPI_ReadReg(uint8_t devicespi, uint8_t regs){
+// }
 
 void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length){
 	uint8_t* rxbuf = NULL;

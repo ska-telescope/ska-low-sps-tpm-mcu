@@ -51,6 +51,8 @@ XO3_Address(
     uint32_t* value,
     void*     privateData
 );
+
+int
 XO3_BitfieldExtract(
 	uint32_t RegBA,
 	uint32_t RegMask,
@@ -58,12 +60,13 @@ XO3_BitfieldExtract(
 	uint32_t* value
 );
 
+int
 XO3_BitfieldRMWrite(
 	uint32_t RegBA,
 	uint32_t RegMask,
 	uint32_t shift,
 	uint32_t value
-)
+);
 
 /*void
 send_spi(

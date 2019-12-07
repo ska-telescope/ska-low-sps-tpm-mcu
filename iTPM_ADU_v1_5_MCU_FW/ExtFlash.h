@@ -9,6 +9,9 @@
 #ifndef EXTFLASH_H_
 #define EXTFLASH_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #define FLASH0_SLID 0x1
 #define FLASH1_SLID 0x2
 
