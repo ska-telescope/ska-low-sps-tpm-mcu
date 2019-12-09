@@ -28,6 +28,7 @@ int ExtFlash_SRAMErase(uint8_t fpgaid){
 	if (fpgaid == 0x2){
 		XO3_WriteByte(itpm_cpld_smap_xil_1, 0);
 	}
+	XO3_WriteByte(itpm_cpld_smap_global, 0x1);
 	uint32_t xil0, xil1;
 	uint8_t trya = 0;
 	XO3_Read(itpm_cpld_smap_xil_0, &xil0); 
@@ -124,17 +125,26 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 	
 	buffer = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
 	rxbuffer = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
-	tmp    = (uint8_t*)buffer;
+	tmp = (uint8_t*)buffer;
 	rxbuf  = (uint8_t*)rxbuffer;
 	
-	uint8_t rxlenght = 0;	
+	uint32_t rxlenght = 0;	
 	
+
 	memcpy(&tmp[offset], txBuffer, length);
+	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
+	XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, 0x06000000);
+	uint32_t pippo = 0xffffffff;
+	XO3_Read(itpm_cpld_regfile_spi_fifo_addr, &pippo);
+	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
+	XO3_Read(itpm_cpld_confspi_rxtx_buffer, &pippo);
+	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, 0x01);
+	XO3_Read(itpm_cpld_regfile_spi_tx_byte, &pippo);
 	
-	XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, tmp);
-	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, length);
-	
-	while((length - rxlenght) > 0) XO3_Read(itpm_cpld_regfile_spi_rx_byte, &rxlenght);
+	while((length - rxlenght) > 0) {
+		XO3_Read(itpm_cpld_regfile_spi_rx_byte, &rxlenght);
+		asm("nop");
+	}
 	
 	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
 	

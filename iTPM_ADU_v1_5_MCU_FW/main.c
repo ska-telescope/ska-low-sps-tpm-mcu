@@ -191,13 +191,26 @@ int main(void)
 	
 	uint32_t vers;
 	
-	XO3_WriteByte(itpm_cpld_regfile_enable, 0x0);
+	//XO3_WriteByte(itpm_cpld_regfile_enable, 0x0);
 	
 	framWrite(FRAM_MCU_POOLING_INTERVAL, 1000);
 	
 	gpio_set_pin_level(USR_LED1, true);
 	
-	uint32_t mtime;
+	uint32_t mtime, xil;
+	uint32_t xil_done = 0xffffffff;
+
+	XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
+	
+	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
+	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
+	
+	//ExtFlash_SRAMErase(0x01);
+	ExtFlash_FPGA_Prog(0x01, 0x1, true);
+	
+	xil_done = 0xffffffff;	
+	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
+	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
 
 	/* Replace with your application code */
 	while (1) {

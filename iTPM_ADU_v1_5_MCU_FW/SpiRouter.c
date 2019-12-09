@@ -243,10 +243,12 @@ XO3_BitfieldExtract(
 )
 {
 	int success;
-	uint32_t tmp;	
+	uint32_t tmp = 0;	
 	
 	success = XO3_Read(RegBA, &tmp);	
-	*value = (tmp & RegMask) >> shift;
+	tmp = (tmp & RegMask) >> shift;
+	
+	*value = tmp;
 	
 	return success;
 }
