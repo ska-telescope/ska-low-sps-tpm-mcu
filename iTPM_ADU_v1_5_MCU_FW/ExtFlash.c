@@ -22,10 +22,10 @@
 #endif
 
 int ExtFlash_SRAMErase(uint8_t fpgaid){
-	if (fpgaid == 0x1){
+	if (fpgaid & 0x1){
 		XO3_WriteByte(itpm_cpld_smap_xil_0, 0);		
 	}
-	if (fpgaid == 0x2){
+	if (fpgaid & 0x2){
 		XO3_WriteByte(itpm_cpld_smap_xil_1, 0);
 	}
 	XO3_WriteByte(itpm_cpld_smap_global, 0x1);
@@ -70,28 +70,39 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	//Read bitstream lenght from flashid
 	txBuffer[0]=0x3;  //write enable command
 	FlashSPI_Sync(0,txBuffer,rxBuffer,8);
-	uint32_t length=(rxBuffer[4]<<24)|(rxBuffer[5]<<16)|(rxBuffer[6]<<8)|(rxBuffer[7]);
+	//uint32_t lengthbit=(rxBuffer[7]<<24)|(rxBuffer[6]<<16)|(rxBuffer[5]<<8)|(rxBuffer[4]);
+	uint32_t lengthbit=(rxBuffer[4]<<24)|(rxBuffer[5]<<16)|(rxBuffer[6]<<8)|(rxBuffer[7]);
 
 
 	//Send FastRead command to flash with CS forced to low at end of command
-	txBuffer[0]=0xb;  //write enable command
+	txBuffer[0]=0x0B;  //write enable command
+	
+	uint32_t test;
+	XO3_Read(itpm_cpld_regfile_spi_cs, &test);
 	
 	XO3_BitfieldRMWrite(itpm_cpld_regfile_spi_cs, itpm_cpld_regfile_spi_cs_ow_M, itpm_cpld_regfile_spi_cs_ow_B, 0); //write 0 on OW flag of CS register
 	//XO3_WriteByte(itpm_cpld_regfile_spi_cs_ow_M, 0);  //write 0 on OW flag of CS register
 	FlashSPI_Sync(0,txBuffer,rxBuffer,8);
-
+	
+	XO3_Read(itpm_cpld_regfile_spi_cs, &test);
+	
+	//XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, 4);
+	
 	//set router to connect Flash out with FPGA in
-	XO3_WriteByte(itpm_cpld_regfile_spi_route, 1);  //write 1 on spi_route register
+	//XO3_WriteByte(itpm_cpld_regfile_spi_route, 1);  //write 1 on spi_route register
 
 	//set register to provide the number of clk pulse equal to bistream lenght
-	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, length);
+	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, lengthbit);
 	//poll done bit to wait operation complete or check timeout
 
-// 	while(1)
-// 	{
-// 		if (   ['board.regfile.xilinx.done']==0x3)
-// 		break;
-// 	}
+	while(1)
+	{
+		uint32_t xil_done;
+		XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
+		if (xil_done==0x3) break;
+		XO3_Read(itpm_cpld_regfile_xilinx, &xil_done);
+		delay_ms(10);
+	}
 	
 	XO3_BitfieldRMWrite(itpm_cpld_regfile_spi_cs, itpm_cpld_regfile_spi_cs_ow_M, itpm_cpld_regfile_spi_cs_ow_B, 1); //write 1 on OW flag of CS register
 	//XO3_WriteByte(itpm_cpld_regfile_spi_cs_ow_M ,1);  //write 1 on OW flag of CS register
@@ -113,7 +124,7 @@ void FlashSPI_WriteReg(uint8_t devicespi, uint8_t regs){
 // void FlashSPI_ReadReg(uint8_t devicespi, uint8_t regs){
 // }
 
-void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length){
+void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length_spi){
 	//uint8_t* rxbuf = NULL;
 	uint8_t* tmp  = nullptr;
 	static const int latency = 0;
@@ -125,15 +136,15 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 	
 	uint8_t  offset = 0;
 	
-	buffer = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
+	buffer = malloc(length_spi + 8); // Make sure we have some (4) spare bytes at the end...
 	//rxbuffer = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
-	tmp = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
+	tmp = malloc(length_spi + 8); // Make sure we have some (4) spare bytes at the end...
 	tmp = (uint8_t*)txBuffer;
 	//rxbuf  = (uint8_t*)rxbuffer;
 	
 	uint32_t rxlenght = 0;	
 	
-	memcpy(&tmp[offset], txBuffer, length);
+	memcpy(&tmp[offset], txBuffer, length_spi);
 	XO3_WriteByte(itpm_cpld_regfile_spi_cs, 0x10001);	
 	
 	uint32_t txt = tmp[0];
@@ -142,7 +153,7 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 	txt += tmp[3] << 24;
 	
 	XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, txt);
-	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, length);
+	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, length_spi);
 		
 	while(rxlenght > 0) {
 		XO3_Read(itpm_cpld_regfile_spi_rx_byte, &rxlenght);
@@ -151,8 +162,8 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 	
 	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
 	
-	int rxlen = length/4;
-  	if ((length % 4) > 0) rxlen++; 
+	int rxlen = length_spi/4;
+  	if ((length_spi % 4) > 0) rxlen++; 
 // 
 // 	for (int i = 0; i < rxlen; i++){
 // 		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &val);
@@ -160,18 +171,19 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 // 		asm("nop");
 // 	}
 	
+	int res = 0;
 	
-	for (int xxx = 0; xxx < length - 1; xxx++){
+	for (int i = 0; i < length_spi -1; i++){
 		uint32_t val = 0xaa;
-		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &val);
-		rxTmp[xxx] = val;
+		res = XO3_Read(itpm_cpld_confspi_rxtx_buffer, &val);
+		rxTmp[i] = val;
 
-		asm("nop");
-		//if (i >= rxlen-1) break;
+		//asm("nop");
+		if (i >= rxlen-1) break; // Soluzione dirty per problema (lenght_spi - 1); se sostituito con qualsiasi altra variabile o valore, il valore letto dalla fifo sarà sempre 0x0
 		
 	}
 	
-	memcpy(rxBuffer, rxTmp, length);
+	memcpy(rxBuffer, rxTmp, length_spi);
 	free(buffer);
 
 	asm("nop");

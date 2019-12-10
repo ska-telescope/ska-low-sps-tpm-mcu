@@ -203,17 +203,15 @@ int main(void)
 	XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
 	
 // 	while (1){
-// 		XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
-// 		XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, 0x12345678);
-// 		XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
-// 		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &xil_done);
+// 		XO3_WriteByte(itpm_cpld_regfile_user_reg0, 0x12345678);
+// 		XO3_Read(itpm_cpld_regfile_user_reg0, &xil_done);
 // 	}
 	
 	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
 	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
 	
 	//ExtFlash_SRAMErase(0x01);
-	ExtFlash_FPGA_Prog(0x01, 0x1, true);
+	ExtFlash_FPGA_Prog(0x0f, 0x1, true);
 	
 	xil_done = 0xffffffff;	
 	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
@@ -234,8 +232,8 @@ int main(void)
 		uint32_t pollingNew;
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
 
-		TWIdataBlock();
-		exchangeDataBlock();
+		//TWIdataBlock();
+		//exchangeDataBlock();
 
 		delay_ms((uint16_t)pollingNew);
 	}
