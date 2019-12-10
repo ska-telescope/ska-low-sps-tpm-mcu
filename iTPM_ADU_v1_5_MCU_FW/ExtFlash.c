@@ -151,22 +151,24 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 	
 	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
 	
-	uint32_t val = 0xaa;
+	int rxlen = length/4;
+  	if ((length % 4) > 0) rxlen++; 
+// 
+// 	for (int i = 0; i < rxlen; i++){
+// 		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &val);
+// 		rxTmp[i] = val;
+// 		asm("nop");
+// 	}
 	
-//     uint8_t rxlen = length/4;
-// 	if ((length % 4) > 0) rxlen++; 
 	
-	for (int i = 0; i < (length-1); i++){
+	for (int xxx = 0; xxx < length - 1; xxx++){
+		uint32_t val = 0xaa;
 		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &val);
-		rxTmp[i] = val;
-		//rxBuffer++;
+		rxTmp[xxx] = val;
+
+		asm("nop");
+		//if (i >= rxlen-1) break;
 		
-		/*
-		rxTmp[i] = (uint8_t)val >> 24;
-		rxTmp[i] += (uint8_t)val >> 16;
-		rxTmp[i] += (uint8_t)val >> 8;
-		rxTmp[i] += (uint8_t)val;
-		*/
 	}
 	
 	memcpy(rxBuffer, rxTmp, length);

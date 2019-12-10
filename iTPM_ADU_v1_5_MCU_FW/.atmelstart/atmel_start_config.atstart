@@ -4,10 +4,10 @@ versions:
   api: '1.0'
   backend: 1.6.148
   commit: 605f106ab95776472e3febf2fac2471441fb1816
-  content: 1.0.1635
+  content: 1.0.1686
   content_pack_name: acme-packs-all
   format: '2'
-  frontend: 1.6.1884
+  frontend: 1.6.1894
 board:
   identifier: CustomBoard
   device: SAMD21J18A-AF
@@ -481,7 +481,7 @@ drivers:
       spi_master_arch_dord: MSB first
       spi_master_arch_ibon: In data stream
       spi_master_arch_runstdby: false
-      spi_master_baud_rate: 12000000
+      spi_master_baud_rate: 8000000
       spi_master_character_size: 8 bits
       spi_master_dummybyte: 255
       spi_master_rx_enable: true

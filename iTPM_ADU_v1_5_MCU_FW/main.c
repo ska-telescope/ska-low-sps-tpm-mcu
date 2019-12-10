@@ -198,16 +198,16 @@ int main(void)
 	gpio_set_pin_level(USR_LED1, true);
 	
 	uint32_t mtime, xil;
-	uint32_t xil_done = 0xffffffff;
+	uint32_t xil_done = 0xfeffffff;
 
 	XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
 	
-	while (1){
-		XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
-		XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, 0x12345678);
-		XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
-		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &xil_done);
-	}
+// 	while (1){
+// 		XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
+// 		XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, 0x12345678);
+// 		XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
+// 		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &xil_done);
+// 	}
 	
 	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
 	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
