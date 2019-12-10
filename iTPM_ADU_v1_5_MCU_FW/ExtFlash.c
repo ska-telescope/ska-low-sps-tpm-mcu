@@ -46,7 +46,7 @@ int ExtFlash_SRAMErase(uint8_t fpgaid){
 
 int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	uint8_t txBuffer[4];
-	uint8_t rxBuffer[8];
+	uint8_t rxBuffer[16];
 	memset(txBuffer, 0, 4);
 	memset(txBuffer, 0, 8);
 	uint32_t address = 0x00000000;
@@ -114,47 +114,66 @@ void FlashSPI_WriteReg(uint8_t devicespi, uint8_t regs){
 // }
 
 void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length){
-	uint8_t* rxbuf = NULL;
+	//uint8_t* rxbuf = NULL;
 	uint8_t* tmp  = nullptr;
 	static const int latency = 0;
 	
+	uint32_t rxTmp[16];
+	
 	void* buffer = NULL;
-	void* rxbuffer = NULL;
+	//void* rxbuffer = NULL;
 	
 	uint8_t  offset = 0;
 	
 	buffer = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
-	rxbuffer = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
-	tmp = (uint8_t*)buffer;
-	rxbuf  = (uint8_t*)rxbuffer;
+	//rxbuffer = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
+	tmp = malloc(length + 8); // Make sure we have some (4) spare bytes at the end...
+	tmp = (uint8_t*)txBuffer;
+	//rxbuf  = (uint8_t*)rxbuffer;
 	
 	uint32_t rxlenght = 0;	
 	
-
 	memcpy(&tmp[offset], txBuffer, length);
-	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
-	XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, 0x06000000);
-	uint32_t pippo = 0xffffffff;
-	XO3_Read(itpm_cpld_regfile_spi_fifo_addr, &pippo);
-	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
-	XO3_Read(itpm_cpld_confspi_rxtx_buffer, &pippo);
-	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, 0x01);
-	XO3_Read(itpm_cpld_regfile_spi_tx_byte, &pippo);
+	XO3_WriteByte(itpm_cpld_regfile_spi_cs, 0x10001);	
 	
-	while((length - rxlenght) > 0) {
+	uint32_t txt = tmp[0];
+	txt += tmp[1] << 8;
+	txt += tmp[2] << 16;
+	txt += tmp[3] << 24;
+	
+	XO3_WriteByte(itpm_cpld_confspi_rxtx_buffer, txt);
+	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, length);
+		
+	while(rxlenght > 0) {
 		XO3_Read(itpm_cpld_regfile_spi_rx_byte, &rxlenght);
 		asm("nop");
 	}
 	
 	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
 	
-	for (int i = 0; i < rxlenght; i++){
-		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &rxbuffer);
-		rxbuffer++;
+	uint32_t val = 0xaa;
+	
+//     uint8_t rxlen = length/4;
+// 	if ((length % 4) > 0) rxlen++; 
+	
+	for (int i = 0; i < (length-1); i++){
+		XO3_Read(itpm_cpld_confspi_rxtx_buffer, &val);
+		rxTmp[i] = val;
+		//rxBuffer++;
+		
+		/*
+		rxTmp[i] = (uint8_t)val >> 24;
+		rxTmp[i] += (uint8_t)val >> 16;
+		rxTmp[i] += (uint8_t)val >> 8;
+		rxTmp[i] += (uint8_t)val;
+		*/
 	}
 	
-	memcpy(rxBuffer, &rxbuf[offset+latency], length);
+	memcpy(rxBuffer, rxTmp, length);
 	free(buffer);
-	free(rxbuffer);	
+
+	asm("nop");
+	//free(rxbuffer);	
+/*	free(tmp);	*/
 	return;	
 }
