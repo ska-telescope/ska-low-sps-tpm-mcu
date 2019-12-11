@@ -29,18 +29,45 @@ int ExtFlash_SRAMErase(uint8_t fpgaid){
 		XO3_WriteByte(itpm_cpld_smap_xil_1, 0x10);
 	}
 	XO3_WriteByte(itpm_cpld_smap_global, 0x1);
+// 	uint32_t xil0, xil1;
+// 	uint8_t trya = 0;
+// 	XO3_Read(itpm_cpld_smap_xil_0, &xil0); 
+// 	XO3_Read(itpm_cpld_smap_xil_1, &xil1); 
+// 	while ((xil0 & 0x01 == 0) && (xil1 & 0x01 == 0)){
+// 		delay_ms(10);
+// 		XO3_Read(itpm_cpld_smap_xil_0, &xil0);
+// 		XO3_Read(itpm_cpld_smap_xil_1, &xil1);
+// 		trya++;
+// 		if (trya == MAX_TRY) return EFERR_NO_ERASE;		
+// 	}
+// 	XO3_WriteByte(itpm_cpld_smap_global, 0x3);
+// 	return 0;
 	uint32_t xil0, xil1;
 	uint8_t trya = 0;
-	XO3_Read(itpm_cpld_smap_xil_0, &xil0); 
-	XO3_Read(itpm_cpld_smap_xil_1, &xil1); 
+	XO3_Read(itpm_cpld_smap_xil_0, &xil0);
+	XO3_Read(itpm_cpld_smap_xil_1, &xil1);
+	//wait init low
+	while ((xil0 & 0x01 == 1) && (xil1 & 0x01 == 1)){
+		delay_ms(10);
+		XO3_Read(itpm_cpld_smap_xil_0, &xil0);
+		XO3_Read(itpm_cpld_smap_xil_1, &xil1);
+		trya++;
+		if (trya == MAX_TRY) return EFERR_NO_ERASE;
+	}
+	//set PROg 1
+	XO3_WriteByte(itpm_cpld_smap_global, 0x3);
+	//wait init high
+	XO3_Read(itpm_cpld_smap_xil_0, &xil0);
+	XO3_Read(itpm_cpld_smap_xil_1, &xil1);
 	while ((xil0 & 0x01 == 0) && (xil1 & 0x01 == 0)){
 		delay_ms(10);
 		XO3_Read(itpm_cpld_smap_xil_0, &xil0);
 		XO3_Read(itpm_cpld_smap_xil_1, &xil1);
 		trya++;
-		if (trya == MAX_TRY) return EFERR_NO_ERASE;		
+		if (trya == MAX_TRY) return EFERR_NO_ERASE;
 	}
 	XO3_WriteByte(itpm_cpld_smap_global, 0x3);
+	
 	return 0;
 }
 
@@ -65,15 +92,14 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	XO3_WriteByte(itpm_cpld_regfile_spi_mux, flashid);
 
 	txBuffer[0]=0x6;  //write enable command
-	FlashSPI_Sync(0,txBuffer,rxBuffer,1);
+	FlashSPI_Sync(0,txBuffer,rxBuffer,1, false);
 
 	//Read bitstream lenght from flashid
 	txBuffer[0]=0x3;  //write enable command
-	FlashSPI_Sync(0,txBuffer,rxBuffer,8);
+	FlashSPI_Sync(0,txBuffer,rxBuffer,4, false);
 	//uint32_t lengthbit=(rxBuffer[7]<<24)|(rxBuffer[6]<<16)|(rxBuffer[5]<<8)|(rxBuffer[4]);
 	uint32_t lengthbit=(rxBuffer[4]<<24)|(rxBuffer[5]<<16)|(rxBuffer[6]<<8)|(rxBuffer[7]);
-
-
+	
 	//Send FastRead command to flash with CS forced to low at end of command
 	txBuffer[0]=0x0B;  //write enable command
 	
@@ -82,7 +108,7 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	
 	XO3_BitfieldRMWrite(itpm_cpld_regfile_spi_cs, itpm_cpld_regfile_spi_cs_ow_M, itpm_cpld_regfile_spi_cs_ow_B, 0); //write 0 on OW flag of CS register
 	//XO3_WriteByte(itpm_cpld_regfile_spi_cs_ow_M, 0);  //write 0 on OW flag of CS register
-	FlashSPI_Sync(0,txBuffer,rxBuffer,8);
+	FlashSPI_Sync(0,txBuffer,rxBuffer,4, true);
 	
 	XO3_Read(itpm_cpld_regfile_spi_cs, &test);
 	
@@ -118,13 +144,13 @@ void FlashSPI_WriteReg(uint8_t devicespi, uint8_t regs){
 	
 	cmd[0] = regs;	
 	
-	FlashSPI_Sync(devicespi, txBuffer, &cmd, 1);
+	FlashSPI_Sync(devicespi, txBuffer, &cmd, 1, false);
 }
 
 // void FlashSPI_ReadReg(uint8_t devicespi, uint8_t regs){
 // }
 
-void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length_spi){
+void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length_spi, bool ignoreCS){
 	//uint8_t* rxbuf = NULL;
 	uint8_t* tmp  = nullptr;
 	static const int latency = 0;
@@ -144,8 +170,10 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 	
 	uint32_t rxlenght = 0;	
 	
+	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
+	
 	memcpy(&tmp[offset], txBuffer, length_spi);
-	XO3_WriteByte(itpm_cpld_regfile_spi_cs, 0x10001);	
+	if (!ignoreCS) XO3_WriteByte(itpm_cpld_regfile_spi_cs, 0x10001);	
 	
 	uint32_t txt = tmp[0];
 	txt += tmp[1] << 8;

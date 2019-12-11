@@ -21,7 +21,7 @@
 int ExtFlash_SRAMErase(uint8_t fpgaid);
 int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore);
 void FlashSPI_WriteReg(uint8_t devicespi, uint8_t regs);
-void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length);
+void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, uint8_t length, bool ignoreCS);
 
 
 
