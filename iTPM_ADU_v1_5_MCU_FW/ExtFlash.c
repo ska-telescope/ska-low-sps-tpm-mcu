@@ -23,10 +23,10 @@
 
 int ExtFlash_SRAMErase(uint8_t fpgaid){
 	if (fpgaid & 0x1){
-		XO3_WriteByte(itpm_cpld_smap_xil_0, 0);		
+		XO3_WriteByte(itpm_cpld_smap_xil_0, 0x10);		
 	}
 	if (fpgaid & 0x2){
-		XO3_WriteByte(itpm_cpld_smap_xil_1, 0);
+		XO3_WriteByte(itpm_cpld_smap_xil_1, 0x10);
 	}
 	XO3_WriteByte(itpm_cpld_smap_global, 0x1);
 	uint32_t xil0, xil1;
@@ -89,7 +89,7 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	//XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, 4);
 	
 	//set router to connect Flash out with FPGA in
-	//XO3_WriteByte(itpm_cpld_regfile_spi_route, 1);  //write 1 on spi_route register
+	XO3_WriteByte(itpm_cpld_regfile_spi_route, 1);  //write 1 on spi_route register
 
 	//set register to provide the number of clk pulse equal to bistream lenght
 	XO3_WriteByte(itpm_cpld_regfile_spi_tx_byte, lengthbit);
