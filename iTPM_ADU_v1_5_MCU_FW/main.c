@@ -202,6 +202,8 @@ int main(void)
 
 	XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
 	
+	delay_ms(1000);
+	
 // 	while (1){
 // 		XO3_WriteByte(itpm_cpld_regfile_user_reg0, 0x12345678);
 // 		XO3_Read(itpm_cpld_regfile_user_reg0, &xil_done);

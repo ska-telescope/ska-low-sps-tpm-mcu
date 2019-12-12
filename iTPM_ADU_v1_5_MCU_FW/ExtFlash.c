@@ -93,10 +93,10 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 
 	txBuffer[0]=0x6;  //write enable command
 	FlashSPI_Sync(0,txBuffer,rxBuffer,1, false);
-
+	delay_ms(50);
 	//Read bitstream lenght from flashid
 	txBuffer[0]=0x3;  //write enable command
-	FlashSPI_Sync(0,txBuffer,rxBuffer,4, false);
+	FlashSPI_Sync(0,txBuffer,rxBuffer,8, false);
 	//uint32_t lengthbit=(rxBuffer[7]<<24)|(rxBuffer[6]<<16)|(rxBuffer[5]<<8)|(rxBuffer[4]);
 	uint32_t lengthbit=(rxBuffer[4]<<24)|(rxBuffer[5]<<16)|(rxBuffer[6]<<8)|(rxBuffer[7]);
 	
@@ -171,6 +171,7 @@ void FlashSPI_Sync(uint8_t slaveId, const uint8_t* txBuffer, uint8_t* rxBuffer, 
 	uint32_t rxlenght = 0;	
 	
 	XO3_WriteByte(itpm_cpld_regfile_spi_fifo_addr, 0x0);
+	delay_ms(10);
 	
 	memcpy(&tmp[offset], txBuffer, length_spi);
 	if (!ignoreCS) XO3_WriteByte(itpm_cpld_regfile_spi_cs, 0x10001);	
