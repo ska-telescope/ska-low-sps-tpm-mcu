@@ -17,6 +17,7 @@
 
 #define EFERR_CPLD_WRONG_VERSION 1
 #define EFERR_NO_ERASE 2
+#define EFERR_NO_FWONFLASH 3
 
 int ExtFlash_SRAMErase(uint8_t fpgaid);
 int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore);

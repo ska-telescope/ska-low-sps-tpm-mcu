@@ -100,6 +100,8 @@ int ExtFlash_FPGA_Prog(uint8_t fpgaid, uint8_t flashid, bool EraseBefore){
 	//uint32_t lengthbit=(rxBuffer[7]<<24)|(rxBuffer[6]<<16)|(rxBuffer[5]<<8)|(rxBuffer[4]);
 	uint32_t lengthbit=(rxBuffer[4]<<24)|(rxBuffer[5]<<16)|(rxBuffer[6]<<8)|(rxBuffer[7]);
 	
+	if (lengthbit == 0xffffffff || lengthbit == 0x00000000) return EFERR_NO_FWONFLASH;
+	
 	//Send FastRead command to flash with CS forced to low at end of command
 	txBuffer[0]=0x0B;  //write enable command
 	
