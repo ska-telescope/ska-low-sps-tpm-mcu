@@ -192,7 +192,7 @@
       </framework-data>
     </AsfFrameworkConfig>
     <avrtool>com.atmel.avrdbg.tool.samice</avrtool>
-    <avrtoolserialnumber>20126333</avrtoolserialnumber>
+    <avrtoolserialnumber>4294967295</avrtoolserialnumber>
     <avrdeviceexpectedsignature>0x10010300</avrdeviceexpectedsignature>
     <avrtoolinterface>SWD</avrtoolinterface>
     <com_atmel_avrdbg_tool_samice>
@@ -203,10 +203,10 @@
         <InterfaceName>SWD</InterfaceName>
       </ToolOptions>
       <ToolType>com.atmel.avrdbg.tool.samice</ToolType>
-      <ToolNumber>20126333</ToolNumber>
-      <ToolName>SAM-ICE</ToolName>
+      <ToolNumber>4294967295</ToolNumber>
+      <ToolName>J-Link</ToolName>
     </com_atmel_avrdbg_tool_samice>
-    <avrtoolinterfaceclock>2000000</avrtoolinterfaceclock>
+    <avrtoolinterfaceclock>4000000</avrtoolinterfaceclock>
     <com_atmel_avrdbg_tool_edbg>
       <ToolOptions>
         <InterfaceProperties>
@@ -445,6 +445,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="BoardStausCodes.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="build_def.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Config\hpl_adc_config.h">

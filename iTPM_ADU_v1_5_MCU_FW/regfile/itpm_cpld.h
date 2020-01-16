@@ -49,9 +49,14 @@
 #define itpm_cpld_spi_cmd_rnw_D	"Missing Description"
 
 #define itpm_cpld_regfile_date_code  	0x30000000	//R
-#define itpm_cpld_regfile_date_code_M	0xFFFFFFFF
+#define itpm_cpld_regfile_date_code_M	0xffffffff
 #define itpm_cpld_regfile_date_code_R	0x00000000
 #define itpm_cpld_regfile_date_code_D	"Compile date"
+
+#define itpm_cpld_regfile_ucp_last_psn  	0x30000004	//RW
+#define itpm_cpld_regfile_ucp_last_psn_M	0xffffffff
+#define itpm_cpld_regfile_ucp_last_psn_R	0x00000000
+#define itpm_cpld_regfile_ucp_last_psn_D	"UCP Last PSN"
 
 #define itpm_cpld_regfile_master_rst  	0x30000008	//RW
 #define itpm_cpld_regfile_master_rst_M	0x00008000
@@ -143,12 +148,7 @@
 #define itpm_cpld_regfile_test_error_R	0x00000000
 #define itpm_cpld_regfile_test_error_D	"C2C Test Error"
 
-#define itpm_cpld_regfile_ucplastpsn  	0x30000044	//RW
-#define itpm_cpld_regfile_ucplastpsn_M	0xffffffff
-#define itpm_cpld_regfile_ucplastpsn_R	0x00000000
-#define itpm_cpld_regfile_ucplastpsn_D	"UCP Last PSN"
-
-#define itpm_cpld_regfile_ethled  	0x30000050	//RW
+#define itpm_cpld_regfile_ethled  	0x30000050	//R
 #define itpm_cpld_regfile_ethled_M	0x00000007
 #define itpm_cpld_regfile_ethled_R	0x00000000
 #define itpm_cpld_regfile_ethled_D	"Etherned LED status"
@@ -682,4 +682,3 @@
 #define itpm_cpld_bram_spi_M	0xFFFFFFFF
 #define itpm_cpld_bram_spi_R	0x0
 #define itpm_cpld_bram_spi_D	"CPU SPI File"
-

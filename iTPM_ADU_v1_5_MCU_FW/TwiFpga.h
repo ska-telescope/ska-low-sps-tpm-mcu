@@ -25,15 +25,12 @@
  * I2C Addresses - 8bit (7bit)
  */
 
-// i2c3
-#define IOEXP	0x40 // (0x20)
-#define PSU1	0xB0 // (0x58)
-#define PSU2	0xB2 // (0x59)
+#define IOEXPANDER 0x40 // 0xCE per accendere led rosso
 
 typedef enum twiFPGAadd_t {
-	i2c1		    = 0x0,
-	i2c2			= 0x100,
-	i2c3			= 0x200
+	i2c1		    = 0x0, // TPM Board
+	i2c2			= 0x1, // QSFP 0
+	i2c3			= 0x2  // QSFP 1
 } twiFPGAadd;
 
 int twiFpgaWrite (uint8_t ICaddress,

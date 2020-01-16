@@ -16,10 +16,15 @@
 #include <string.h>
 #include <math.h>
 
+#include "build_def.h"
 #include "SpiRouter.h"
 #include "regfile.h"
 #include "TwiFpga.h"
 #include "ADT7408.h"
+
+const uint32_t _build_version = 0xb0000012;
+const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
+const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
 #define ADCCOLUMNS 14
 uint16_t adcArrgh[2][ADCCOLUMNS] = {
@@ -171,9 +176,25 @@ void TWIdataBlock(void){
 	
 }
 
-void timedStuff(){
+void StartupStuff(void){
+	uint32_t res;
+	
+	framWrite(FRAM_MCU_VERSION, _build_version);
+	framWrite(FRAM_MCU_COMPILE_DATE, _build_date);
+	framWrite(FRAM_MCU_COMPILE_TIME, _build_time);
+	
+	gpio_set_pin_level(USR_LED1, true);
+	
+	analogStart();
+	
+	twiFpgaWrite(IOEXPANDER, 1, 1, 0xCE, NULL, i2c2); // Da provare
+	twiFpgaWrite(IOEXPANDER, 1, 1, 0xCE, NULL, i2c3); // Da provare
 	
 }
+
+// void timedStuff(){
+// 	
+// }
 
 int main(void)
 {
@@ -185,9 +206,7 @@ int main(void)
 	
 	//SysTick_Config(1);
 	
-	framWrite(FRAM_MCU_VERSION, 0xb0000010);
-	
-	analogStart();
+	StartupStuff();
 	
 	uint32_t vers;
 	
@@ -195,12 +214,12 @@ int main(void)
 	
 	framWrite(FRAM_MCU_POOLING_INTERVAL, 1000);
 	
-	gpio_set_pin_level(USR_LED1, true);
+	
 	
 	uint32_t mtime, xil;
 	uint32_t xil_done = 0xfeffffff;
 
-	XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
+	//XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
 	
 	delay_ms(1000);
 	
@@ -213,7 +232,7 @@ int main(void)
 	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
 	
 	//ExtFlash_SRAMErase(0x01);
-	ExtFlash_FPGA_Prog(0x0f, 0x1, true);
+	//ExtFlash_FPGA_Prog(0x0f, 0x1, true);
 	
 	xil_done = 0xffffffff;	
 	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
@@ -233,9 +252,11 @@ int main(void)
 		
 		uint32_t pollingNew;
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
-
-		//TWIdataBlock();
-		//exchangeDataBlock();
+		if(pollingNew > 2000){
+			pollingNew = 2000;
+		}
+		TWIdataBlock();
+		exchangeDataBlock();
 
 		delay_ms((uint16_t)pollingNew);
 	}
