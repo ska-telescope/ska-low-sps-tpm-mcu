@@ -15,12 +15,47 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
+
+#include "driver_init.h"
+#include "utils.h"
 
 #include "build_def.h"
 #include "SpiRouter.h"
 #include "regfile.h"
 #include "TwiFpga.h"
 #include "ADT7408.h"
+
+// WARNING - Proper undefine DEBUG in Project properties
+#ifdef DEBUG
+char bufferOut[512];
+#undef DEBUG
+#define DEBUG 3 // Possible Choice: 3: Maximum Level - 2: Medium Level - 1: Minimum Level - Only #def: Status
+#endif
+
+#if defined(DEBUG)
+#define DEBUG_PRINT(...) do{sprintf(bufferOut, __VA_ARGS__); deb_print();} while( false )
+#else
+#define DEBUG_PRINT(...) do{ } while ( false )
+#endif
+
+#if defined(DEBUG) && DEBUG > 0
+#define DEBUG_PRINT1(...) do{sprintf(bufferOut, __VA_ARGS__); deb_print(0x1);} while( false )
+#else
+#define DEBUG_PRINT1(...) do{ } while ( false )
+#endif
+
+#if defined(DEBUG) && DEBUG > 1
+#define DEBUG_PRINT2(...) do{sprintf(bufferOut, __VA_ARGS__); deb_print(0x2);} while( false )
+#else
+#define DEBUG_PRINT2(...) do{ } while ( false )
+#endif
+
+#if defined(DEBUG) && DEBUG > 2
+#define DEBUG_PRINT3(...) do{sprintf(bufferOut, __VA_ARGS__); deb_print(0x3);} while( false )
+#else
+#define DEBUG_PRINT3(...) do{ } while ( false )
+#endif
 
 const uint32_t _build_version = 0xb0000012;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
@@ -54,19 +89,63 @@ float adcDivider[ADCCOLUMNS] = {0, 0, 0, 0, 0, 0, 0, (float)12000/960, 0, 0, (fl
 int anaReadPos = 0;
 bool anaNotReady = true;
 
+/* --------- CONST------------------- */
+
+const uint32_t DEFAULT_POLLING_INTERVAL = 1000;
+
+/* ---------------------------------- */
+
 /* --------- VAR -------------------- */
 
 static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC 2^16
 
+bool irqTimerSlow = false;
+bool irqTimerFast = false;
+
 uint32_t ADT7408_temp_raw;
-float ADT7408_temp;
+uint16_t ADT7408_temp;
 bool ADT7408Regs[3];
 uint32_t pollingHz;
 uint32_t reg_ThresholdEnable = 0;
 uint16_t reg_ThresholdVals [2][17];
+uint32_t pollingOld = 1000;
+uint32_t pollingNew = 1000;
 
 /* -----------------------------------*/
 
+#ifdef DEBUG
+void deb_print(uint8_t debug_level = 0){
+	char * str;
+	str = const_cast<char *>(bufferOut);
+	struct io_descriptor *uartDebug;
+	usart_sync_get_io_descriptor(&USART_0, &uartDebug);
+	usart_sync_enable(&USART_0);
+	switch (debug_level) {
+		case 0x1:
+			io_write(uartDebug, (uint8_t *)"d1:", (unsigned)3);
+			break;
+		case 0x2:
+			io_write(uartDebug, (uint8_t *)"d2:", (unsigned)3);
+			break;
+		case 0x3:
+			io_write(uartDebug, (uint8_t *)"d3:", (unsigned)3);
+			break;
+	}
+	io_write(uartDebug, (uint8_t *)str, (unsigned)strlen(str));
+}
+#endif
+
+/* -----------------------------------*/
+
+void framRead(uint32_t fram_register, uint32_t* readback){
+	uint32_t intreadback;
+	XO3_Read(itpm_cpld_bram_cpu + fram_register, &intreadback);
+	*readback = intreadback;
+}
+
+void framWrite(uint32_t fram_register, uint32_t writedata){
+	XO3_WriteByte(itpm_cpld_bram_cpu + fram_register, writedata);
+}
 
 static __inline__ void ADCsync() __attribute__((always_inline, unused));
 static void ADCsync() {
@@ -91,52 +170,19 @@ void exchangeDataBlock(){
 	
 	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
 	
-	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
-	if (reg_ThresholdEnable && 0x80000000) {
-		int x = 0;
-		for (uint32_t i = FRAM_ALARM_THR_SW_AVDD1; i < 0x1D8; i += 4){
-			uint32_t temp;
-			framRead(i, &temp);
-			reg_ThresholdVals[0][x] = (temp && 0xFFFF); // High Threshold
-			reg_ThresholdVals[1][x] = (temp && 0xFFFF0000) >> 16; // Low Threshold
-			x++;
-		}
-	}
+// 	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
+// 	if (reg_ThresholdEnable && 0x80000000) {
+// 		int x = 0;
+// 		for (uint32_t i = FRAM_ALARM_THR_SW_AVDD1; i < 0x1D8; i += 4){
+// 			uint32_t temp;
+// 			framRead(i, &temp);
+// 			reg_ThresholdVals[0][x] = (temp && 0xFFFF); // High Threshold
+// 			reg_ThresholdVals[1][x] = (temp && 0xFFFF0000) >> 16; // Low Threshold
+// 			x++;
+// 		}
+// 	}
 	
 }
-
-
-void framRead(uint32_t fram_register, uint32_t* readback){
-	uint32_t intreadback;
-	XO3_Read(itpm_cpld_bram_cpu + fram_register, &intreadback);
-	*readback = intreadback;
-}
-
-void framWrite(uint32_t fram_register, uint32_t writedata){
-	XO3_WriteByte(itpm_cpld_bram_cpu + fram_register, writedata);
-}
-
-
-void analogStart() { // Single read, much FASTER
-	//REG_PM_APBCMASK |= 0x10000; // Enable bus Clock
-	//REG_GCLK_CLKCTRL = 0x4001E;
-	//REG_ADC_SAMPCTRL = 5;
-	ADC->INPUTCTRL.bit.MUXNEG = 0x18; // Mux NEG GND
-	SYSCTRL->VREF.bit.TSEN = 1; // Enable TSENOR
-	//REG_ADC_REFCTRL = 0;
-	//REG_ADC_CTRLA = 2;
-	
-	ADCsync();
-	ADC->CTRLA.bit.ENABLE = 0x01;              // Enable ADC
-
-	ADC->INTFLAG.bit.RESRDY = 1;               // Data ready flag cleared
-
-	ADCsync();
-	ADC->SWTRIG.bit.START = 1;                 // Start ADC conversion
-	
-	while (anaReadPos < ADCCOLUMNS) analogRead();
-}
-
 
 void analogRead() { // Single read, much FASTER
 	if (ADC->INTFLAG.bit.RESRDY == 1){
@@ -163,12 +209,33 @@ void analogRead() { // Single read, much FASTER
 	}
 }
 
+void analogStart() { // Single read, much FASTER
+	DEBUG_PRINT("Analog Start\n");
+	//REG_PM_APBCMASK |= 0x10000; // Enable bus Clock
+	//REG_GCLK_CLKCTRL = 0x4001E;
+	//REG_ADC_SAMPCTRL = 5;
+	ADC->INPUTCTRL.bit.MUXNEG = 0x18; // Mux NEG GND
+	SYSCTRL->VREF.bit.TSEN = 1; // Enable TSENOR
+	//REG_ADC_REFCTRL = 0;
+	//REG_ADC_CTRLA = 2;
+	
+	ADCsync();
+	ADC->CTRLA.bit.ENABLE = 0x01;              // Enable ADC
+
+	ADC->INTFLAG.bit.RESRDY = 1;               // Data ready flag cleared
+
+	ADCsync();
+	ADC->SWTRIG.bit.START = 1;                 // Start ADC conversion
+	
+	while (anaReadPos < ADCCOLUMNS) analogRead();
+}
+
 void TWIdataBlock(void){
 	int status;
 	uint32_t retvalue = 0xffffffff;
 
 	// i2c1
-	readBoardTemp(&ADT7408_temp, &ADT7408Regs);
+   //readBoardTemp(&ADT7408_temp, &ADT7408Regs[3]); // Disabled for errors
 	status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
 	//XO3_WriteByte(fram_ADT7408_M_1_temp_val + fram_offset, retvalue);
 	retvalue = 0xffffffff;
@@ -179,6 +246,13 @@ void TWIdataBlock(void){
 void StartupStuff(void){
 	uint32_t res;
 	
+	DEBUG_PRINT("\nSKA iTPM 1.6 - Debug Enabled\n");
+	DEBUG_PRINT("Debug level: %d\n", (int) DEBUG);
+	DEBUG_PRINT("Version: %x\n", _build_version);
+	DEBUG_PRINT("Date: %x\n", _build_date);
+	DEBUG_PRINT("Time: %x\n", _build_time);
+	DEBUG_PRINT("-------------------------------\n\n");
+	
 	framWrite(FRAM_MCU_VERSION, _build_version);
 	framWrite(FRAM_MCU_COMPILE_DATE, _build_date);
 	framWrite(FRAM_MCU_COMPILE_TIME, _build_time);
@@ -187,14 +261,38 @@ void StartupStuff(void){
 	
 	analogStart();
 	
-	twiFpgaWrite(IOEXPANDER, 1, 1, 0xCE, NULL, i2c2); // Da provare
-	twiFpgaWrite(IOEXPANDER, 1, 1, 0xCE, NULL, i2c3); // Da provare
+	twiFpgaWrite(IOEXPANDER, 1, 2, 0xCE, NULL, i2c2); // Da provare
+	twiFpgaWrite(IOEXPANDER, 1, 2, 0xCE, NULL, i2c3); // Da provare
 	
 }
 
-// void timedStuff(){
-// 	
-// }
+static struct timer_task TIMER_0_task1, TIMER_0_task2;
+
+static void timerSlow(const struct timer_task *const timer_task){
+	irqTimerSlow = true; // Enable Task
+}
+
+void taskSlow(){
+	gpio_toggle_pin_level(USR_LED0);
+	
+	TWIdataBlock();
+	exchangeDataBlock();
+	
+	framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
+	DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);
+	if(pollingNew > 2000){
+		pollingNew = 2000;
+	}
+	if (pollingOld != pollingNew){
+		timer_stop(&TIMER_0);
+		TIMER_0_task1.interval = pollingNew;
+		timer_start(&TIMER_0);
+		pollingOld = pollingNew;
+		DEBUG_PRINT("Pooling Time Changed to %d\n", pollingNew);
+	}
+	
+	irqTimerSlow = false; // Disable Task untile next IRQ
+}
 
 int main(void)
 {
@@ -207,12 +305,11 @@ int main(void)
 	//SysTick_Config(1);
 	
 	StartupStuff();
+	framWrite(FRAM_MCU_POOLING_INTERVAL, DEFAULT_POLLING_INTERVAL);
 	
 	uint32_t vers;
 	
-	//XO3_WriteByte(itpm_cpld_regfile_enable, 0x0);
 	
-	framWrite(FRAM_MCU_POOLING_INTERVAL, 1000);
 	
 	
 	
@@ -239,25 +336,29 @@ int main(void)
 	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
 
 	/* Replace with your application code */
+	
+	
+	TIMER_0_task1.interval = 1000;
+	TIMER_0_task1.cb       = timerSlow;
+	TIMER_0_task1.mode     = TIMER_TASK_REPEAT;
+// 	TIMER_0_task2.interval = 200;
+// 	TIMER_0_task2.cb       = TIMER_0_task2_cb;
+// 	TIMER_0_task2.mode     = TIMER_TASK_REPEAT;
+
+	timer_add_task(&TIMER_0, &TIMER_0_task1);
+/*	timer_add_task(&TIMER_0, &TIMER_0_task2);*/
+	timer_start(&TIMER_0);
+	
+	DEBUG_PRINT("Default Polling Time set to %x\n", pollingOld);	
+
+	
 	while (1) {
-		mtime = _system_time_get();
-		gpio_toggle_pin_level(USR_LED0);
-		XO3_Read(0x30000010, &vers);
-		
-		XO3_Read(0x30000010, &vers);
-		XO3_WriteByte(itpm_cpld_i2c_transmit, 0x7777777);
-		XO3_Read(itpm_cpld_i2c_transmit, &vers); 
-		framRead(FRAM_MCU_VERSION, &vers);
+		uint32_t vers;
+		gpio_toggle_pin_level(USR_LED1);
+
 		analogRead();
 		
-		uint32_t pollingNew;
-		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
-		if(pollingNew > 2000){
-			pollingNew = 2000;
-		}
-		TWIdataBlock();
-		exchangeDataBlock();
-
-		delay_ms((uint16_t)pollingNew);
+		if (irqTimerSlow) taskSlow();
+		
 	}
 }

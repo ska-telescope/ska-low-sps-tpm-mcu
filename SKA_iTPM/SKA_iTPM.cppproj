@@ -1,0 +1,297 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <PropertyGroup>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>7.0</ProjectVersion>
+    <ToolchainName>com.Atmel.ARMGCC.CPP</ToolchainName>
+    <ProjectGuid>{641c8123-59aa-42af-bafd-cba3246cd299}</ProjectGuid>
+    <avrdevice>ATSAMD21J18A</avrdevice>
+    <avrdeviceseries>none</avrdeviceseries>
+    <OutputType>Executable</OutputType>
+    <Language>CPP</Language>
+    <OutputFileName>$(MSBuildProjectName)</OutputFileName>
+    <OutputFileExtension>.elf</OutputFileExtension>
+    <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
+    <AssemblyName>SKA_iTPM</AssemblyName>
+    <Name>SKA_iTPM</Name>
+    <RootNamespace>SKA_iTPM</RootNamespace>
+    <ToolchainFlavour>Native</ToolchainFlavour>
+    <KeepTimersRunning>true</KeepTimersRunning>
+    <OverrideVtor>false</OverrideVtor>
+    <CacheFlash>true</CacheFlash>
+    <ProgFlashFromRam>true</ProgFlashFromRam>
+    <RamSnippetAddress>0x20000000</RamSnippetAddress>
+    <UncachedRange />
+    <preserveEEPROM>true</preserveEEPROM>
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
+    <BootSegment>2</BootSegment>
+    <ResetRule>0</ResetRule>
+    <eraseonlaunchrule>0</eraseonlaunchrule>
+    <EraseKey />
+    <AsfFrameworkConfig>
+      <framework-data xmlns="">
+  <options />
+  <configurations />
+  <files />
+  <documentation help="" />
+  <offline-documentation help="" />
+  <dependencies>
+    <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.46.0" />
+  </dependencies>
+</framework-data>
+    </AsfFrameworkConfig>
+    <avrtool>com.atmel.avrdbg.tool.samice</avrtool>
+    <avrtoolserialnumber>20126405</avrtoolserialnumber>
+    <avrdeviceexpectedsignature>0x10010300</avrdeviceexpectedsignature>
+    <avrtoolinterface>SWD</avrtoolinterface>
+    <com_atmel_avrdbg_tool_samice>
+      <ToolOptions>
+        <InterfaceProperties>
+          <SwdClock>4000000</SwdClock>
+        </InterfaceProperties>
+        <InterfaceName>SWD</InterfaceName>
+      </ToolOptions>
+      <ToolType>com.atmel.avrdbg.tool.samice</ToolType>
+      <ToolNumber>20126405</ToolNumber>
+      <ToolName>SAM-ICE</ToolName>
+    </com_atmel_avrdbg_tool_samice>
+    <avrtoolinterfaceclock>4000000</avrtoolinterfaceclock>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <ToolchainSettings>
+      <ArmGccCpp>
+        <armgcc.common.outputfiles.hex>True</armgcc.common.outputfiles.hex>
+        <armgcc.common.outputfiles.lss>True</armgcc.common.outputfiles.lss>
+        <armgcc.common.outputfiles.eep>True</armgcc.common.outputfiles.eep>
+        <armgcc.common.outputfiles.bin>True</armgcc.common.outputfiles.bin>
+        <armgcc.common.outputfiles.srec>True</armgcc.common.outputfiles.srec>
+        <armgcc.compiler.symbols.DefSymbols>
+          <ListValues>
+            <Value>NDEBUG</Value>
+          </ListValues>
+        </armgcc.compiler.symbols.DefSymbols>
+        <armgcc.compiler.directories.IncludePaths>
+          <ListValues>
+            <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+            <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+          </ListValues>
+        </armgcc.compiler.directories.IncludePaths>
+        <armgcc.compiler.optimization.level>Optimize for size (-Os)</armgcc.compiler.optimization.level>
+        <armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>True</armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>
+        <armgcc.compiler.warnings.AllWarnings>True</armgcc.compiler.warnings.AllWarnings>
+        <armgcccpp.compiler.symbols.DefSymbols>
+          <ListValues>
+            <Value>NDEBUG</Value>
+          </ListValues>
+        </armgcccpp.compiler.symbols.DefSymbols>
+        <armgcccpp.compiler.directories.IncludePaths>
+          <ListValues>
+            <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+            <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+          </ListValues>
+        </armgcccpp.compiler.directories.IncludePaths>
+        <armgcccpp.compiler.optimization.level>Optimize for size (-Os)</armgcccpp.compiler.optimization.level>
+        <armgcccpp.compiler.optimization.PrepareFunctionsForGarbageCollection>True</armgcccpp.compiler.optimization.PrepareFunctionsForGarbageCollection>
+        <armgcccpp.compiler.warnings.AllWarnings>True</armgcccpp.compiler.warnings.AllWarnings>
+        <armgcccpp.linker.libraries.Libraries>
+          <ListValues>
+            <Value>libm</Value>
+          </ListValues>
+        </armgcccpp.linker.libraries.Libraries>
+        <armgcccpp.linker.libraries.LibrarySearchPaths>
+          <ListValues>
+            <Value>%24(ProjectDir)\Device_Startup</Value>
+          </ListValues>
+        </armgcccpp.linker.libraries.LibrarySearchPaths>
+        <armgcccpp.linker.optimization.GarbageCollectUnusedSections>True</armgcccpp.linker.optimization.GarbageCollectUnusedSections>
+        <armgcccpp.linker.miscellaneous.LinkerFlags>-Tsamd21j18a_flash.ld</armgcccpp.linker.miscellaneous.LinkerFlags>
+        <armgcccpp.assembler.general.IncludePaths>
+          <ListValues>
+            <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+            <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+          </ListValues>
+        </armgcccpp.assembler.general.IncludePaths>
+        <armgcccpp.preprocessingassembler.general.IncludePaths>
+          <ListValues>
+            <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+            <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+          </ListValues>
+        </armgcccpp.preprocessingassembler.general.IncludePaths>
+      </ArmGccCpp>
+    </ToolchainSettings>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <ToolchainSettings>
+      <ArmGccCpp>
+  <armgcc.common.outputfiles.hex>True</armgcc.common.outputfiles.hex>
+  <armgcc.common.outputfiles.lss>True</armgcc.common.outputfiles.lss>
+  <armgcc.common.outputfiles.eep>True</armgcc.common.outputfiles.eep>
+  <armgcc.common.outputfiles.bin>True</armgcc.common.outputfiles.bin>
+  <armgcc.common.outputfiles.srec>True</armgcc.common.outputfiles.srec>
+  <armgcc.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>DEBUG</Value>
+      <Value>printf=iprintf</Value>
+      <Value>scanf=iscanf</Value>
+    </ListValues>
+  </armgcc.compiler.symbols.DefSymbols>
+  <armgcc.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/Config</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/examples</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hal/include</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hal/utils/include</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/adc</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/core</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/dmac</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/eic</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/gclk</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/pm</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/port</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/sercom</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/sysctrl</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/systick</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/tc</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hri</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/regfile</Value>
+      <Value>../libs/SpiRouter</Value>
+      <Value>../libs/SystemInit</Value>
+      <Value>..</Value>
+      <Value>../regfile</Value>
+      <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+    </ListValues>
+  </armgcc.compiler.directories.IncludePaths>
+  <armgcc.compiler.optimization.level>Optimize (-O1)</armgcc.compiler.optimization.level>
+  <armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>True</armgcc.compiler.optimization.PrepareFunctionsForGarbageCollection>
+  <armgcc.compiler.optimization.DebugLevel>Maximum (-g3)</armgcc.compiler.optimization.DebugLevel>
+  <armgcc.compiler.warnings.AllWarnings>True</armgcc.compiler.warnings.AllWarnings>
+  <armgcc.compiler.miscellaneous.OtherFlags>-std=gnu99 --specs=nosys.specs</armgcc.compiler.miscellaneous.OtherFlags>
+  <armgcccpp.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>DEBUG</Value>
+      <Value>printf=iprintf</Value>
+      <Value>scanf=iscanf</Value>
+    </ListValues>
+  </armgcccpp.compiler.symbols.DefSymbols>
+  <armgcccpp.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/Config</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/examples</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hal/include</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hal/utils/include</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/adc</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/core</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/dmac</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/eic</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/gclk</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/pm</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/port</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/sercom</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/sysctrl</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/systick</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hpl/tc</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/hri</Value>
+      <Value>../../iTPM_ADU_v1_5_MCU_FW/regfile</Value>
+      <Value>../libs/SpiRouter</Value>
+      <Value>../libs/SystemInit</Value>
+      <Value>../regfile</Value>
+      <Value>..</Value>
+      <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+      <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include\component</Value>
+    </ListValues>
+  </armgcccpp.compiler.directories.IncludePaths>
+  <armgcccpp.compiler.optimization.level>Optimize (-O1)</armgcccpp.compiler.optimization.level>
+  <armgcccpp.compiler.optimization.PrepareFunctionsForGarbageCollection>True</armgcccpp.compiler.optimization.PrepareFunctionsForGarbageCollection>
+  <armgcccpp.compiler.optimization.DebugLevel>Maximum (-g3)</armgcccpp.compiler.optimization.DebugLevel>
+  <armgcccpp.compiler.warnings.AllWarnings>True</armgcccpp.compiler.warnings.AllWarnings>
+  <armgcccpp.compiler.miscellaneous.OtherFlags>-std=c++0x</armgcccpp.compiler.miscellaneous.OtherFlags>
+  <armgcccpp.linker.libraries.Libraries>
+    <ListValues>
+      <Value>libm</Value>
+    </ListValues>
+  </armgcccpp.linker.libraries.Libraries>
+  <armgcccpp.linker.libraries.LibrarySearchPaths>
+    <ListValues>
+      <Value>%24(ProjectDir)\Device_Startup</Value>
+    </ListValues>
+  </armgcccpp.linker.libraries.LibrarySearchPaths>
+  <armgcccpp.linker.optimization.GarbageCollectUnusedSections>True</armgcccpp.linker.optimization.GarbageCollectUnusedSections>
+  <armgcccpp.linker.memorysettings.ExternalRAM />
+  <armgcccpp.linker.miscellaneous.LinkerFlags>-Tsamd21j18a_flash.ld</armgcccpp.linker.miscellaneous.LinkerFlags>
+  <armgcccpp.assembler.general.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+      <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+    </ListValues>
+  </armgcccpp.assembler.general.IncludePaths>
+  <armgcccpp.assembler.debugging.DebugLevel>Default (-g)</armgcccpp.assembler.debugging.DebugLevel>
+  <armgcccpp.preprocessingassembler.general.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\ARM\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
+      <Value>%24(PackRepoDir)\atmel\SAMD21_DFP\1.3.331\samd21a\include</Value>
+    </ListValues>
+  </armgcccpp.preprocessingassembler.general.IncludePaths>
+  <armgcccpp.preprocessingassembler.debugging.DebugLevel>Default (-Wa,-g)</armgcccpp.preprocessingassembler.debugging.DebugLevel>
+</ArmGccCpp>
+    </ToolchainSettings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Device_Startup\startup_samd21.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Device_Startup\system_samd21.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="libs\SpiRouter\SpiRouter.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="libs\SpiRouter\SpiRouter.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="libs\SystemInit\SystemInit.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="libs\SystemInit\SystemInt.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="main.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="regfile\itpm_cpld.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="regfile\regfile.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="syscall.c">
+      <SubType>compile</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Device_Startup\" />
+    <Folder Include="libs" />
+    <Folder Include="libs\SystemInit" />
+    <Folder Include="libs\SpiRouter" />
+    <Folder Include="regfile" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Device_Startup\samd21j18a_flash.ld">
+      <SubType>compile</SubType>
+    </None>
+    <None Include="Device_Startup\samd21j18a_sram.ld">
+      <SubType>compile</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\iTPM_ADU_v1_5_MCU_FW\ATSart.cproj">
+      <Name>ATSart</Name>
+      <Project>{dce6c7e3-ee26-4d79-826b-08594b9ad897}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
+</Project>

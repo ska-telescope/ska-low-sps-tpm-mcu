@@ -5,6 +5,8 @@
  *  Author: luca
  */ 
 
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifndef ADT7408_H_
 #define ADT7408_H_
@@ -24,6 +26,9 @@
 #define ADT7408_BELOW_ALARM 8192 // BIT 13
 #define ADT7408_TEMP_SIGN 4096 // BIT 12
 // -------------------------------------------
+
+void readBoardTemp(uint16_t* Temp, bool* TempRegs[]);
+
 
 
 #endif /* ADT7408_H_ */
