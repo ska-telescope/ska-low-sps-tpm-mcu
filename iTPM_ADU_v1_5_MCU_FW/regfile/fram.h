@@ -28,6 +28,7 @@
 
 #define FRAM_BOARD_STATUS					0x000000E0 //RW - 32 bit
 #define FRAM_BOARD_ALARM					0x000000E4 //RW - 32 bit 
+#define FRAM_BOARD_WARNING					0x000000E8 //RW - 32 bit
 
 #define FRAM_ADC_SW_AVDD1					0x00000100 //RW - 16 bit
 #define FRAM_ADC_SW_AVDD2					0x00000104 //RW - 16 bit

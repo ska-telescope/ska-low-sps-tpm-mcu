@@ -31,7 +31,7 @@
 #ifdef DEBUG
 char bufferOut[512];
 #undef DEBUG
-#define DEBUG 2 // Possible Choice: 3: Maximum Level - 2: Medium Level - 1: Minimum Level - Only #def: Status
+#define DEBUG 2 // Possible Choice: 3: Log Level - 2: Warning Level - 1: Error Level - Only #def: Status
 #endif
 
 #if defined(DEBUG)
@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000015;
+const uint32_t _build_version = 0xb0000016;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -72,6 +72,7 @@ struct ADCstruct {
 	uint16_t alarmTHRdowner;
 	uint16_t warningTHRupper;
 	uint16_t warningTHRdowner;
+	bool enabled;
 	};
 	
 struct ADCstruct VoltagesTemps[ADCCOLUMNS+TEMPS_SENSOR]; // +3 Temperatures
@@ -135,8 +136,42 @@ static void ADCsync() {
 	while (ADC->STATUS.bit.SYNCBUSY == 1); //Just wait till the ADC is free
 }
 
-void SKAchangeAlarmSettings(){
+void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VGApwr) {
+	uint8_t tmp = 0;
+	if (ADCpwr)			tmp += 0x1;
+	if (FRONTENDpwr)	tmp += 0x2;
+	if (FPGApwr)		tmp += 0x4;
+	if (SYSRpwr)		tmp += 0x8;
+	if (VGApwr)			tmp += 0x10;
 	
+	XO3_WriteByte(itpm_cpld_regfile_enable, tmp);
+	
+	DEBUG_PRINT("Powered devices ADC %d - Frontend %d - FPGA %d - SYSR %d - VGA %d\n", ADCpwr, FRONTENDpwr, FPGApwr, SYSRpwr, VGApwr);
+}
+
+void SKAalarmManage(){
+	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
+		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
+		DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRupper);
+		delay_ms(500); // ONLY FOR TEST
+	}	
+	if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
+		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
+		DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRdowner);
+		delay_ms(500); // ONLY FOR TEST
+	}
+	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
+		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+		SKAPower(0,0,0,0,0);
+		DEBUG_PRINT1("ADC ALARM %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
+		delay_ms(500); // ONLY FOR TEST
+	}
+	if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
+		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+		SKAPower(0,0,0,0,0);
+		DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
+		delay_ms(500); // ONLY FOR TEST
+	}
 }
 
 void exchangeDataBlock(){
@@ -160,7 +195,7 @@ void exchangeDataBlock(){
 	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
 	
 	framRead(FRAM_WARN_ALARM_UPDATE, &res);
-	if (res > 0x0) SKAchangeAlarmSettings();
+	//if (res > 0x0) SKAchangeAlarmSettings();
 	
 // 	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
 // 	if (reg_ThresholdEnable && 0x80000000) {
@@ -176,20 +211,7 @@ void exchangeDataBlock(){
 	
 }
 
-void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VGApwr) {
-	uint8_t tmp = 0;
-	if (ADCpwr)			tmp += 0x1;
-	if (FRONTENDpwr)	tmp += 0x2;
-	if (FPGApwr)		tmp += 0x4;
-	if (SYSRpwr)		tmp += 0x8;
-	if (VGApwr)			tmp += 0x10;
-	
-	XO3_WriteByte(itpm_cpld_regfile_enable, tmp);
-	
-	DEBUG_PRINT("Powered devices ADC %d - Frontend %d - FPGA %d - SYSR %d - VGA %d\n", ADCpwr, FRONTENDpwr, FPGApwr, SYSRpwr, VGApwr);
-}
-
-void analogRead() { // Single read, much FASTER
+void ADCreadSingle() { // Single read, much FASTER
 	if (ADC->INTFLAG.bit.RESRDY == 1){
 		//uint32_t valueRead = ADC->RESULT.reg;
 		//adcArrgh[1][anaReadPos] = ADC->RESULT.reg; // Save ADC read to the array
@@ -207,7 +229,10 @@ void analogRead() { // Single read, much FASTER
 		
 		ADCsync();
 		ADC->SWTRIG.reg = 0x01;                    //  and flush for good measure
-		if (anaReadPos > ADCCOLUMNS -1){
+		
+		SKAalarmManage();
+		
+		if (anaReadPos >= ADCCOLUMNS-1){
 			anaReadPos = 0;
 			anaNotReady = false;
 		}
@@ -218,7 +243,7 @@ void analogRead() { // Single read, much FASTER
 	}
 }
 
-void analogStart() { // Single read, much FASTER
+void ADCstart() { // Single read, much FASTER
 	DEBUG_PRINT("Analog Start\n");
 	//REG_PM_APBCMASK |= 0x10000; // Enable bus Clock
 	//REG_GCLK_CLKCTRL = 0x4001E;
@@ -236,7 +261,7 @@ void analogStart() { // Single read, much FASTER
 	ADCsync();
 	ADC->SWTRIG.bit.START = 1;                 // Start ADC conversion
 	
-	while (anaReadPos < ADCCOLUMNS) analogRead();
+	while (anaReadPos < ADCCOLUMNS) ADCreadSingle();
 }
 
 void TWIdataBlock(void){
@@ -302,6 +327,10 @@ void SKAsystemMonitorStart(){
 	
 	DEBUG_PRINT("Load Voltages and Temperature Settings\n");
 	
+	for (int i = 0; i < (ADCCOLUMNS + TEMPS_SENSOR); i++){
+		VoltagesTemps[i].enabled = false;
+	}
+	
 	// Voltages	
 	// ADC4 - PA04 - SW_AVDD1	
 	VoltagesTemps[0].ADCpin				= 4;
@@ -334,6 +363,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[3].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MAN_1V2);
 	VoltagesTemps[3].warningTHRupper	= uint16_t(SETTING_WARN_THR_MAN_1V2>>16);
 	VoltagesTemps[3].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MAN_1V2);
+	VoltagesTemps[3].enabled			= true;
 	
 	// ADC16 - PA08 - DDR0_VREF
 	VoltagesTemps[4].ADCpin				= 16;
@@ -358,6 +388,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[6].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_DRVDD);
 	VoltagesTemps[6].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_DRVDD>>16);
 	VoltagesTemps[6].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VM_DRVDD);
+	VoltagesTemps[6].enabled			= true;
 	
 	// ADC8 - PB00 - VIN_SCALED
 	VoltagesTemps[7].ADCpin				= 8;
@@ -366,6 +397,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[7].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VIN_SCALED);
 	VoltagesTemps[7].warningTHRupper	= uint16_t(SETTING_WARN_THR_VIN_SCALED>>16);
 	VoltagesTemps[7].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VIN_SCALED);
+	VoltagesTemps[7].enabled			= true;
 	
 	// ADC9 - PB01 - VM_MAN3V3
 	VoltagesTemps[8].ADCpin				= 9;
@@ -390,6 +422,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[10].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MON_5V0);
 	VoltagesTemps[10].warningTHRupper	= uint16_t(SETTING_WARN_THR_MON_5V0>>16);
 	VoltagesTemps[10].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MON_5V0);
+	VoltagesTemps[10].enabled			= true;
 	
 	// ADC14 - PB06 - MGT_AV
 	VoltagesTemps[11].ADCpin			= 14;
@@ -411,6 +444,7 @@ void SKAsystemMonitorStart(){
 	// ADC24 - INT 0x18 - Internal Temperature (Need option to enable)
 	VoltagesTemps[13].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_INTERNAL_MCU_TEMP>>16);
 	VoltagesTemps[13].warningTHRupper	= uint16_t(SETTING_WARN_THR_INTERNAL_MCU_TEMP>>16);
+	VoltagesTemps[13].enabled			= true;
 	
 	VoltagesTemps[14].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_BOARD_TEMP>>16);
 	VoltagesTemps[14].warningTHRupper	= uint16_t(SETTING_WARN_THR_BOARD_TEMP>>16);
@@ -427,7 +461,7 @@ void SKAsystemMonitorStart(){
 		DEBUG_PRINT2("PIN %d - Divider %f\n", VoltagesTemps[i].ADCpin, VoltagesTemps[i].divider);
 	}
 	
-	analogStart();
+	ADCstart();
 	
 }
 
@@ -549,7 +583,7 @@ int main(void)
 		uint32_t vers;
 		gpio_toggle_pin_level(USR_LED1);
 
-		analogRead();
+		ADCreadSingle();
 		
 		if (irqTimerSlow) taskSlow();
 		
