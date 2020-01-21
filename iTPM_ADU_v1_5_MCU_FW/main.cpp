@@ -20,6 +20,7 @@
 #include "driver_init.h"
 #include "utils.h"
 
+#include "Settings_itpm.h"
 #include "build_def.h"
 #include "SpiRouter.h"
 #include "regfile.h"
@@ -30,7 +31,7 @@
 #ifdef DEBUG
 char bufferOut[512];
 #undef DEBUG
-#define DEBUG 3 // Possible Choice: 3: Maximum Level - 2: Medium Level - 1: Minimum Level - Only #def: Status
+#define DEBUG 2 // Possible Choice: 3: Maximum Level - 2: Medium Level - 1: Minimum Level - Only #def: Status
 #endif
 
 #if defined(DEBUG)
@@ -57,43 +58,25 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000012;
+const uint32_t _build_version = 0xb0000015;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
 #define ADCCOLUMNS 14
-uint16_t adcArrgh[2][ADCCOLUMNS] = {
-	{
-		4,  // PA04 -SW_AVDD1
-		5,  // PA05 - SW_AVDD2
-		6,  // PA06 - AVDD3
-		7,  // PA07 - MAN_1V2
-		16, // PA08 - DDR0_VREF
-		17, // PA09 - DDR1_VREF
-		18, // PA10 - VM_DRVDD
-		
-		8,  // PB00 - VIN_SCALED
-		9,  // PB01 - VM_MAN3V3
-		10, // PB02 - VM_MAN1V8	
-		11, // PB03 - MON_5V0	
-		14, // PB06 - MGT_AV
-		15, // PB07 - MGT_AVTT	
-		
-		24, //INT 0x18 - INTERNAL TEMP
-	},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}   /*  initializers for row indexed by 1 */
-};
-
-float adcDivider[ADCCOLUMNS] = {0, 0, 0, 0, 0, 0, 0, (float)12000/960, 0, 0, (float)5000/1825, 0, 0, 0};
-
+#define TEMPS_SENSOR 3
+struct ADCstruct {
+	int ADCpin;
+	uint16_t ADCread;
+	float divider;
+	uint16_t alarmTHRupper;
+	uint16_t alarmTHRdowner;
+	uint16_t warningTHRupper;
+	uint16_t warningTHRdowner;
+	};
+	
+struct ADCstruct VoltagesTemps[ADCCOLUMNS+TEMPS_SENSOR]; // +3 Temperatures
 int anaReadPos = 0;
 bool anaNotReady = true;
-
-/* --------- CONST------------------- */
-
-const uint32_t DEFAULT_POLLING_INTERVAL = 1000;
-
-/* ---------------------------------- */
 
 /* --------- VAR -------------------- */
 
@@ -152,23 +135,32 @@ static void ADCsync() {
 	while (ADC->STATUS.bit.SYNCBUSY == 1); //Just wait till the ADC is free
 }
 
+void SKAchangeAlarmSettings(){
+	
+}
+
 void exchangeDataBlock(){
-	framWrite(FRAM_ADC_SW_AVDD1,			adcArrgh[1][0]);
-	framWrite(FRAM_ADC_SW_AVDD2,			adcArrgh[1][1]);
-	framWrite(FRAM_ADC_AVDD3,				adcArrgh[1][2]);
-	framWrite(FRAM_ADC_MAN_1V2,				adcArrgh[1][3]);
-	framWrite(FRAM_ADC_DDR0_VREF,			adcArrgh[1][4]);
-	framWrite(FRAM_ADC_DDR1_VREF,			adcArrgh[1][5]);
-	framWrite(FRAM_ADC_VM_DRVDD,			adcArrgh[1][6]);
-	framWrite(FRAM_ADC_VIN_SCALED,			adcArrgh[1][7]);
-	framWrite(FRAM_ADC_VM_MAN3V3,			adcArrgh[1][8]);
-	framWrite(FRAM_ADC_VM_MAN1V8,			adcArrgh[1][9]);
-	framWrite(FRAM_ADC_MON_5V0,				adcArrgh[1][10]);
-	framWrite(FRAM_ADC_MGT_AV,				adcArrgh[1][11]);
-	framWrite(FRAM_ADC_MGT_AVTT,			adcArrgh[1][12]);
-	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	adcArrgh[1][13]);
+	uint32_t res = 0x0;
+	
+	framWrite(FRAM_ADC_SW_AVDD1,			VoltagesTemps[0].ADCread);
+	framWrite(FRAM_ADC_SW_AVDD2,			VoltagesTemps[1].ADCread);
+	framWrite(FRAM_ADC_AVDD3,				VoltagesTemps[2].ADCread);
+	framWrite(FRAM_ADC_MAN_1V2,				VoltagesTemps[3].ADCread);
+	framWrite(FRAM_ADC_DDR0_VREF,			VoltagesTemps[4].ADCread);
+	framWrite(FRAM_ADC_DDR1_VREF,			VoltagesTemps[5].ADCread);
+	framWrite(FRAM_ADC_VM_DRVDD,			VoltagesTemps[6].ADCread);
+	framWrite(FRAM_ADC_VIN_SCALED,			VoltagesTemps[7].ADCread);
+	framWrite(FRAM_ADC_VM_MAN3V3,			VoltagesTemps[8].ADCread);
+	framWrite(FRAM_ADC_VM_MAN1V8,			VoltagesTemps[9].ADCread);
+	framWrite(FRAM_ADC_MON_5V0,				VoltagesTemps[10].ADCread);
+	framWrite(FRAM_ADC_MGT_AV,				VoltagesTemps[11].ADCread);
+	framWrite(FRAM_ADC_MGT_AVTT,			VoltagesTemps[12].ADCread);
+	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	VoltagesTemps[13].ADCread);
 	
 	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
+	
+	framRead(FRAM_WARN_ALARM_UPDATE, &res);
+	if (res > 0x0) SKAchangeAlarmSettings();
 	
 // 	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
 // 	if (reg_ThresholdEnable && 0x80000000) {
@@ -178,10 +170,23 @@ void exchangeDataBlock(){
 // 			framRead(i, &temp);
 // 			reg_ThresholdVals[0][x] = (temp && 0xFFFF); // High Threshold
 // 			reg_ThresholdVals[1][x] = (temp && 0xFFFF0000) >> 16; // Low Threshold
-// 			x++;
+// 			x+;+
 // 		}
 // 	}
 	
+}
+
+void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VGApwr) {
+	uint8_t tmp = 0;
+	if (ADCpwr)			tmp += 0x1;
+	if (FRONTENDpwr)	tmp += 0x2;
+	if (FPGApwr)		tmp += 0x4;
+	if (SYSRpwr)		tmp += 0x8;
+	if (VGApwr)			tmp += 0x10;
+	
+	XO3_WriteByte(itpm_cpld_regfile_enable, tmp);
+	
+	DEBUG_PRINT("Powered devices ADC %d - Frontend %d - FPGA %d - SYSR %d - VGA %d\n", ADCpwr, FRONTENDpwr, FPGApwr, SYSRpwr, VGApwr);
 }
 
 void analogRead() { // Single read, much FASTER
@@ -192,9 +197,13 @@ void analogRead() { // Single read, much FASTER
 		float ADC_voltage = (ADC_STEP * ADC->RESULT.reg) * 1000;
 		///??? float Voltage = (ADC_voltage * ADC_STEP) * 1000;
 		
-		if (adcDivider[anaReadPos] == 0) adcArrgh[1][anaReadPos] = (uint16_t)ADC_voltage;
-		else adcArrgh[1][anaReadPos] = (uint16_t)(ADC_voltage * adcDivider[anaReadPos]);
+		if (VoltagesTemps[anaReadPos].divider == 0) VoltagesTemps[anaReadPos].ADCread = (uint16_t)ADC_voltage;
+		else VoltagesTemps[anaReadPos].ADCread = (uint16_t)(ADC_voltage * VoltagesTemps[anaReadPos].divider);
 		
+		//if (adcDivider[anaReadPos] == 0) adcArrgh[1][anaReadPos] = (uint16_t)ADC_voltage;
+		//else adcArrgh[1][anaReadPos] = (uint16_t)(ADC_voltage * adcDivider[anaReadPos]);
+		
+		DEBUG_PRINT3("ANALOG_READ > %d %i\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread);
 		
 		ADCsync();
 		ADC->SWTRIG.reg = 0x01;                    //  and flush for good measure
@@ -203,7 +212,7 @@ void analogRead() { // Single read, much FASTER
 			anaNotReady = false;
 		}
 		else anaReadPos++;
-		ADC->INPUTCTRL.bit.MUXPOS = adcArrgh[0][anaReadPos];
+		ADC->INPUTCTRL.bit.MUXPOS = VoltagesTemps[anaReadPos].ADCpin;
 		ADC->INTFLAG.bit.RESRDY = 1;
 		ADC->SWTRIG.bit.START = 1;
 	}
@@ -243,6 +252,185 @@ void TWIdataBlock(void){
 	
 }
 
+void StartupLoadSettings(void){
+	DEBUG_PRINT("Push Settings to CPLD\n");
+	
+	framWrite(FRAM_MCU_POOLING_INTERVAL, DEFAULT_POLLING_INTERVAL);
+	
+	framWrite(FRAM_WARN_ALARM_UPDATE, SETTING_WARN_ALARM_UPDATE);
+	
+	framWrite(FRAM_WARN_THR_SW_AVDD1			, SETTING_WARN_THR_SW_AVDD1				);
+	framWrite(FRAM_WARN_THR_SW_AVDD2			, SETTING_WARN_THR_SW_AVDD2				);
+	framWrite(FRAM_WARN_THR_AVDD3				, SETTING_WARN_THR_AVDD3				);
+	framWrite(FRAM_WARN_THR_MAN_1V2				, SETTING_WARN_THR_MAN_1V2				);
+	framWrite(FRAM_WARN_THR_DDR0_VREF			, SETTING_WARN_THR_DDR0_VREF			);
+	framWrite(FRAM_WARN_THR_DDR1_VREF			, SETTING_WARN_THR_DDR1_VREF			);
+	framWrite(FRAM_WARN_THR_VM_DRVDD			, SETTING_WARN_THR_VM_DRVDD				);
+	framWrite(FRAM_WARN_THR_VIN_SCALED			, SETTING_WARN_THR_VIN_SCALED			);
+	framWrite(FRAM_WARN_THR_VM_MAN3V3			, SETTING_WARN_THR_VM_MAN3V3			);
+	framWrite(FRAM_WARN_THR_VM_MAN1V8			, SETTING_WARN_THR_VM_MAN1V8			);
+	framWrite(FRAM_WARN_THR_MON_5V0				, SETTING_WARN_THR_MON_5V0				);
+	framWrite(FRAM_WARN_THR_MGT_AV				, SETTING_WARN_THR_MGT_AV				);
+	framWrite(FRAM_WARN_THR_MGT_AVTT			, SETTING_WARN_THR_MGT_AVTT				);
+	framWrite(FRAM_WARN_THR_INTERNAL_MCU_TEMP	, SETTING_WARN_THR_INTERNAL_MCU_TEMP	);
+	framWrite(FRAM_WARN_THR_BOARD_TEMP			, SETTING_WARN_THR_BOARD_TEMP			);
+	framWrite(FRAM_WARN_THR_FPGA0_TEMP			, SETTING_WARN_THR_FPGA0_TEMP			);
+	framWrite(FRAM_WARN_THR_FPGA1_TEMP			, SETTING_WARN_THR_FPGA1_TEMP			);
+	
+	framWrite(FRAM_ALARM_THR_SW_AVDD1			, SETTING_ALARM_THR_SW_AVDD1			);
+	framWrite(FRAM_ALARM_THR_SW_AVDD2			, SETTING_ALARM_THR_SW_AVDD2			);
+	framWrite(FRAM_ALARM_THR_AVDD3				, SETTING_ALARM_THR_AVDD3				);
+	framWrite(FRAM_ALARM_THR_MAN_1V2			, SETTING_ALARM_THR_MAN_1V2				);
+	framWrite(FRAM_ALARM_THR_DDR0_VREF			, SETTING_ALARM_THR_DDR0_VREF			);
+	framWrite(FRAM_ALARM_THR_DDR1_VREF			, SETTING_ALARM_THR_DDR1_VREF			);
+	framWrite(FRAM_ALARM_THR_VM_DRVDD			, SETTING_ALARM_THR_VM_DRVDD			);
+	framWrite(FRAM_ALARM_THR_VIN_SCALED			, SETTING_ALARM_THR_VIN_SCALED			);
+	framWrite(FRAM_ALARM_THR_VM_MAN3V3			, SETTING_ALARM_THR_VM_MAN3V3			);
+	framWrite(FRAM_ALARM_THR_VM_MAN1V8			, SETTING_ALARM_THR_VM_MAN1V8			);
+	framWrite(FRAM_ALARM_THR_MON_5V0			, SETTING_ALARM_THR_MON_5V0				);
+	framWrite(FRAM_ALARM_THR_MGT_AV				, SETTING_ALARM_THR_MGT_AV				);
+	framWrite(FRAM_ALARM_THR_MGT_AVTT			, SETTING_ALARM_THR_MGT_AVTT			);
+	framWrite(FRAM_ALARM_THR_INTERNAL_MCU_TEMP	, SETTING_ALARM_THR_INTERNAL_MCU_TEMP	);
+	framWrite(FRAM_ALARM_THR_BOARD_TEMP			, SETTING_ALARM_THR_BOARD_TEMP			);
+	framWrite(FRAM_ALARM_THR_FPGA0_TEMP			, SETTING_ALARM_THR_FPGA0_TEMP			);
+	framWrite(FRAM_ALARM_THR_FPGA1_TEMP			, SETTING_ALARM_THR_FPGA1_TEMP			);
+	
+}
+
+void SKAsystemMonitorStart(){
+	// Create Struct
+	
+	DEBUG_PRINT("Load Voltages and Temperature Settings\n");
+	
+	// Voltages	
+	// ADC4 - PA04 - SW_AVDD1	
+	VoltagesTemps[0].ADCpin				= 4;
+	VoltagesTemps[0].divider			= 0;
+	VoltagesTemps[0].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_SW_AVDD1>>16);
+	VoltagesTemps[0].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD1);
+	VoltagesTemps[0].warningTHRupper	= uint16_t(SETTING_WARN_THR_SW_AVDD1>>16);
+	VoltagesTemps[0].warningTHRdowner	= uint16_t(SETTING_WARN_THR_SW_AVDD1);
+	
+	// ADC5 - PA05 - SW_AVDD2
+	VoltagesTemps[1].ADCpin				= 5;
+	VoltagesTemps[1].divider			= 0;
+	VoltagesTemps[1].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_SW_AVDD2>>16);
+	VoltagesTemps[1].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD2);
+	VoltagesTemps[1].warningTHRupper	= uint16_t(SETTING_WARN_THR_SW_AVDD2>>16);
+	VoltagesTemps[1].warningTHRdowner	= uint16_t(SETTING_WARN_THR_SW_AVDD2);
+	
+	// ADC6 - PA06 - AVDD3
+	VoltagesTemps[2].ADCpin				= 6;
+	VoltagesTemps[2].divider			= 0;
+	VoltagesTemps[2].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_AVDD3>>16);
+	VoltagesTemps[2].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_AVDD3);
+	VoltagesTemps[2].warningTHRupper	= uint16_t(SETTING_WARN_THR_AVDD3>>16);
+	VoltagesTemps[2].warningTHRdowner	= uint16_t(SETTING_WARN_THR_AVDD3);
+	
+	// ADC7 - PA07 - MAN_1V2
+	VoltagesTemps[3].ADCpin				= 7;
+	VoltagesTemps[3].divider			= 0;
+	VoltagesTemps[3].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MAN_1V2>>16);
+	VoltagesTemps[3].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MAN_1V2);
+	VoltagesTemps[3].warningTHRupper	= uint16_t(SETTING_WARN_THR_MAN_1V2>>16);
+	VoltagesTemps[3].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MAN_1V2);
+	
+	// ADC16 - PA08 - DDR0_VREF
+	VoltagesTemps[4].ADCpin				= 16;
+	VoltagesTemps[4].divider			= 0;
+	VoltagesTemps[4].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_DDR0_VREF>>16);
+	VoltagesTemps[4].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR0_VREF);
+	VoltagesTemps[4].warningTHRupper	= uint16_t(SETTING_WARN_THR_DDR0_VREF>>16);
+	VoltagesTemps[4].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR0_VREF);
+	
+	// ADC17 - PA09 - DDR1_VREF
+	VoltagesTemps[5].ADCpin				= 17;
+	VoltagesTemps[5].divider			= 0;
+	VoltagesTemps[5].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_DDR1_VREF>>16);
+	VoltagesTemps[5].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR1_VREF);
+	VoltagesTemps[5].warningTHRupper	= uint16_t(SETTING_WARN_THR_DDR1_VREF>>16);
+	VoltagesTemps[5].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR1_VREF);
+	
+	// ADC18 - PA10 - VM_DRVDD
+	VoltagesTemps[6].ADCpin				= 18;
+	VoltagesTemps[6].divider			= 0;
+	VoltagesTemps[6].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_DRVDD>>16);
+	VoltagesTemps[6].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_DRVDD);
+	VoltagesTemps[6].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_DRVDD>>16);
+	VoltagesTemps[6].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VM_DRVDD);
+	
+	// ADC8 - PB00 - VIN_SCALED
+	VoltagesTemps[7].ADCpin				= 8;
+	VoltagesTemps[7].divider			= 12.5; // 12000/960
+	VoltagesTemps[7].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VIN_SCALED>>16);
+	VoltagesTemps[7].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VIN_SCALED);
+	VoltagesTemps[7].warningTHRupper	= uint16_t(SETTING_WARN_THR_VIN_SCALED>>16);
+	VoltagesTemps[7].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VIN_SCALED);
+	
+	// ADC9 - PB01 - VM_MAN3V3
+	VoltagesTemps[8].ADCpin				= 9;
+	VoltagesTemps[8].divider			= 0;
+	VoltagesTemps[8].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3>>16);
+	VoltagesTemps[8].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3);
+	VoltagesTemps[8].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_MAN3V3>>16);
+	VoltagesTemps[8].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VM_MAN3V3);
+	
+	// ADC10 - PB02 - VM_MAN1V8
+	VoltagesTemps[9].ADCpin				= 10;
+	VoltagesTemps[9].divider			= 0;
+	VoltagesTemps[9].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8>>16);
+	VoltagesTemps[9].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8);
+	VoltagesTemps[9].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_MAN1V8>>16);
+	VoltagesTemps[9].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VM_MAN1V8);
+	
+	// ADC11 - PB03 - MON_5V0
+	VoltagesTemps[10].ADCpin			= 11;
+	VoltagesTemps[10].divider			= 2.739726; // 5000/1825)
+	VoltagesTemps[10].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MON_5V0>>16);
+	VoltagesTemps[10].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MON_5V0);
+	VoltagesTemps[10].warningTHRupper	= uint16_t(SETTING_WARN_THR_MON_5V0>>16);
+	VoltagesTemps[10].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MON_5V0);
+	
+	// ADC14 - PB06 - MGT_AV
+	VoltagesTemps[11].ADCpin			= 14;
+	VoltagesTemps[11].divider			= 0;
+	VoltagesTemps[11].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MGT_AV>>16);
+	VoltagesTemps[11].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MGT_AV);
+	VoltagesTemps[11].warningTHRupper	= uint16_t(SETTING_WARN_THR_MGT_AV>>16);
+	VoltagesTemps[11].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MGT_AV);
+	
+	// ADC15 - PB07 - MGT_AVTT
+	VoltagesTemps[12].ADCpin			= 15;
+	VoltagesTemps[12].divider			= 0;
+	VoltagesTemps[12].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MGT_AVTT>>16);
+	VoltagesTemps[12].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MGT_AVTT);
+	VoltagesTemps[12].warningTHRupper	= uint16_t(SETTING_WARN_THR_MGT_AVTT>>16);
+	VoltagesTemps[12].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MGT_AVTT);
+	
+	// Temperatures	
+	// ADC24 - INT 0x18 - Internal Temperature (Need option to enable)
+	VoltagesTemps[13].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_INTERNAL_MCU_TEMP>>16);
+	VoltagesTemps[13].warningTHRupper	= uint16_t(SETTING_WARN_THR_INTERNAL_MCU_TEMP>>16);
+	
+	VoltagesTemps[14].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_BOARD_TEMP>>16);
+	VoltagesTemps[14].warningTHRupper	= uint16_t(SETTING_WARN_THR_BOARD_TEMP>>16);
+	
+	VoltagesTemps[15].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA0_TEMP>>16);
+	VoltagesTemps[15].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA0_TEMP>>16);
+	
+	VoltagesTemps[16].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA1_TEMP>>16);
+	VoltagesTemps[16].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA1_TEMP>>16);
+	
+	DEBUG_PRINT2("Temps and Voltages Loaded:\n");
+	for (int i = 0; i < (ADCCOLUMNS + TEMPS_SENSOR); i++){
+		VoltagesTemps[i].ADCread = 0;
+		DEBUG_PRINT2("PIN %d - Divider %f\n", VoltagesTemps[i].ADCpin, VoltagesTemps[i].divider);
+	}
+	
+	analogStart();
+	
+}
+
 void StartupStuff(void){
 	uint32_t res;
 	
@@ -251,15 +439,21 @@ void StartupStuff(void){
 	DEBUG_PRINT("Version: %x\n", _build_version);
 	DEBUG_PRINT("Date: %x\n", _build_date);
 	DEBUG_PRINT("Time: %x\n", _build_time);
-	DEBUG_PRINT("-------------------------------\n\n");
-	
 	framWrite(FRAM_MCU_VERSION, _build_version);
 	framWrite(FRAM_MCU_COMPILE_DATE, _build_date);
 	framWrite(FRAM_MCU_COMPILE_TIME, _build_time);
 	
+	XO3_Read(itpm_cpld_regfile_date_code, &res);
+	DEBUG_PRINT("CPLD Version: %x\n", res);
+	DEBUG_PRINT("-------------------------------\n\n");
+	
 	gpio_set_pin_level(USR_LED1, true);
 	
-	analogStart();
+	SKAPower(0,0,0,0,0);
+	
+	SKAsystemMonitorStart();
+	
+	StartupLoadSettings();
 	
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xCE, NULL, i2c2); // Da provare
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xCE, NULL, i2c3); // Da provare
@@ -279,7 +473,7 @@ void taskSlow(){
 	exchangeDataBlock();
 	
 	framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
-	DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);
+	//DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);
 	if(pollingNew > 2000){
 		pollingNew = 2000;
 	}
@@ -305,7 +499,6 @@ int main(void)
 	//SysTick_Config(1);
 	
 	StartupStuff();
-	framWrite(FRAM_MCU_POOLING_INTERVAL, DEFAULT_POLLING_INTERVAL);
 	
 	uint32_t vers;
 	
