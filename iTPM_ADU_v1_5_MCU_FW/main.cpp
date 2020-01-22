@@ -30,7 +30,7 @@
 // WARNING - Proper undefine DEBUG in Project properties
 #ifdef DEBUG
 char bufferOut[512];
-#undef DEBUG
+#undef DEBUG // Undefine only for remove warning
 #define DEBUG 2 // Possible Choice: 3: Log Level - 2: Warning Level - 1: Error Level - Only #def: Status
 #endif
 
@@ -261,7 +261,9 @@ void ADCstart() { // Single read, much FASTER
 	ADCsync();
 	ADC->SWTRIG.bit.START = 1;                 // Start ADC conversion
 	
-	while (anaReadPos < ADCCOLUMNS) ADCreadSingle();
+	for (int i=0; i < ADCCOLUMNS; i++) ADCreadSingle();
+	//while (anaReadPos < ADCCOLUMNS) ADCreadSingle();
+	anaReadPos = 0;
 }
 
 void TWIdataBlock(void){
@@ -470,6 +472,10 @@ void StartupStuff(void){
 	
 	DEBUG_PRINT("\nSKA iTPM 1.6 - Debug Enabled\n");
 	DEBUG_PRINT("Debug level: %d\n", (int) DEBUG);
+	
+	twiFpgaWrite(IOEXPANDER, 1, 2, 0xF0, &res, i2c2);
+	twiFpgaWrite(IOEXPANDER, 1, 2, 0xF0, &res, i2c3);	
+
 	DEBUG_PRINT("Version: %x\n", _build_version);
 	DEBUG_PRINT("Date: %x\n", _build_date);
 	DEBUG_PRINT("Time: %x\n", _build_time);
@@ -489,9 +495,10 @@ void StartupStuff(void){
 	
 	StartupLoadSettings();
 	
-	twiFpgaWrite(IOEXPANDER, 1, 2, 0xCE, NULL, i2c2); // Da provare
-	twiFpgaWrite(IOEXPANDER, 1, 2, 0xCE, NULL, i2c3); // Da provare
+	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c2);
+	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c3);
 	
+	DEBUG_PRINT("Startup Done\n");	
 }
 
 static struct timer_task TIMER_0_task1, TIMER_0_task2;
@@ -522,6 +529,10 @@ void taskSlow(){
 	irqTimerSlow = false; // Disable Task untile next IRQ
 }
 
+void WDT_Handler(void){
+	asm("nop");
+}
+
 int main(void)
 {
 	// Cheap delay startup ~1000 ms total
@@ -545,7 +556,7 @@ int main(void)
 
 	//XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
 	
-	delay_ms(1000);
+	//delay_ms(1000);
 	
 // 	while (1){
 // 		XO3_WriteByte(itpm_cpld_regfile_user_reg0, 0x12345678);
