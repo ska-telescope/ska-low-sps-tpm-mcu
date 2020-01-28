@@ -18,7 +18,7 @@
 
 #define FRAM_MCU_VERSION					0x00000000 //R  - 32 bit
 #define FRAM_MCU_COMPILE_DATE				0x00000004 //R  - 32 bit
-#define FRAM_MCU_COMPILE_TIME				0x00000008 //R  - 32 bit
+#define FRAM_MCU_GIT_HASH					0x00000008 //R  - 32 bit
 #define	FRAM_MCU_GPR_0						0x0000000C //RW - 32 bit
 #define	FRAM_MCU_GPR_1						0x00000010 //RW - 32 bit
 #define	FRAM_MCU_GPR_2						0x00000014 //RW - 32 bit

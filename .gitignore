@@ -79,3 +79,4 @@ MLC150_AS/MAIN_Sanitas/jlink.log
 *.bak
 versionCache/
 jlink.log
+build_def_GitHash.h

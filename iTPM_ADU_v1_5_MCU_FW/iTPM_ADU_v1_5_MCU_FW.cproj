@@ -406,6 +406,7 @@
         <armgcccpp.linker.miscellaneous.LinkerFlags>-T../Device_Startup/samd21j18a_flash.ld</armgcccpp.linker.miscellaneous.LinkerFlags>
       </ArmGccCpp>
     </ToolchainSettings>
+    <PreBuildEvent>"$(MSBuildProjectDirectory)\build_def_GitHashChanger.py" "$(MSBuildProjectDirectory)\build_def_GitHash.h"</PreBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="atmel_start.c">
@@ -421,6 +422,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="build_def.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="build_def_GitHash.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="Config\hpl_adc_config.h">

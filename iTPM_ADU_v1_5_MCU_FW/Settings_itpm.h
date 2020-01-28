@@ -12,6 +12,9 @@
 const uint16_t DEFAULT_POLLING_INTERVAL = 1000;
 
 // ---------------------------------------------------------------------------
+enum VoltTemps{SWAVDD1, SWAVDD2, SWAVDD3, MAN1V2, DDR0VREF, DDR1VREF, VMDRVDD, VINSCALED, MAN3V3, MAN1V8, MON5V0, MGTAV, MGAVTT, INTTEMP, BOARDTEMP, FPGA0TEMP, FPGA1TEMP}; 
+
+
 // THREASHOLDS = 32 bit - [31:15]Upper Threshold - [14:0] Lower Threshold
 
 const uint8_t SETTING_WARN_ALARM_UPDATE			= 0x0;

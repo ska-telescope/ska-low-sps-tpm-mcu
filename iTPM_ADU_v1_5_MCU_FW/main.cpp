@@ -58,9 +58,9 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000016;
+const uint32_t _build_version = 0xb0000021;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
-const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
+//const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
 #define ADCCOLUMNS 14
 #define TEMPS_SENSOR 3
@@ -149,29 +149,162 @@ void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VG
 	DEBUG_PRINT("Powered devices ADC %d - Frontend %d - FPGA %d - SYSR %d - VGA %d\n", ADCpwr, FRONTENDpwr, FPGApwr, SYSRpwr, VGApwr);
 }
 
+void SKAalarmUpdate(void){
+		uint32_t risp;
+		
+		// WARNING
+		
+		framRead(FRAM_WARN_THR_SW_AVDD1, &risp);
+		VoltagesTemps[int(SWAVDD1)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(SWAVDD1)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_SW_AVDD2, &risp);
+		VoltagesTemps[int(SWAVDD2)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(SWAVDD2)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_AVDD3, &risp);
+		VoltagesTemps[int(SWAVDD3)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(SWAVDD3)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_MAN_1V2, &risp);
+		VoltagesTemps[int(MAN1V2)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(MAN1V2)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_DDR0_VREF, &risp);
+		VoltagesTemps[int(DDR0VREF)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(DDR0VREF)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_DDR1_VREF, &risp);
+		VoltagesTemps[int(DDR1VREF)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(DDR1VREF)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_VM_DRVDD, &risp);
+		VoltagesTemps[int(VMDRVDD)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(VMDRVDD)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_VIN_SCALED, &risp);
+		VoltagesTemps[int(VINSCALED)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(VINSCALED)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_VM_MAN3V3, &risp);
+		VoltagesTemps[int(MAN3V3)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(MAN3V3)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_VM_MAN1V8, &risp);
+		VoltagesTemps[int(MAN1V8)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(MAN1V8)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_MON_5V0, &risp);
+		VoltagesTemps[int(MON5V0)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(MON5V0)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_MGT_AV, &risp);
+		VoltagesTemps[int(MGTAV)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(MGTAV)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_MGT_AVTT, &risp);
+		VoltagesTemps[int(MGAVTT)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(MGAVTT)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_INTERNAL_MCU_TEMP, &risp);
+		VoltagesTemps[int(INTTEMP)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(INTTEMP)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_BOARD_TEMP, &risp);
+		VoltagesTemps[int(BOARDTEMP)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(BOARDTEMP)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_FPGA0_TEMP, &risp);
+		VoltagesTemps[int(FPGA0TEMP)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(FPGA0TEMP)].warningTHRupper = uint16_t(risp>>16);
+		
+		framRead(FRAM_WARN_THR_FPGA1_TEMP, &risp);
+		VoltagesTemps[int(FPGA1TEMP)].warningTHRdowner = uint16_t(risp); VoltagesTemps[int(FPGA1TEMP)].warningTHRupper = uint16_t(risp>>16);
+		
+		// ALARM
+		
+		framRead(FRAM_ALARM_THR_SW_AVDD1, &risp);
+		VoltagesTemps[int(SWAVDD1)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(SWAVDD1)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_SW_AVDD2, &risp);
+		VoltagesTemps[int(SWAVDD2)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(SWAVDD2)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_AVDD3, &risp);
+		VoltagesTemps[int(SWAVDD3)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(SWAVDD3)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_MAN_1V2, &risp);
+		VoltagesTemps[int(MAN1V2)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(MAN1V2)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_DDR0_VREF, &risp);
+		VoltagesTemps[int(DDR0VREF)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(DDR0VREF)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_DDR1_VREF, &risp);
+		VoltagesTemps[int(DDR1VREF)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(DDR1VREF)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_VM_DRVDD, &risp);
+		VoltagesTemps[int(VMDRVDD)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(VMDRVDD)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_VIN_SCALED, &risp);
+		VoltagesTemps[int(VINSCALED)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(VINSCALED)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_VM_MAN3V3, &risp);
+		VoltagesTemps[int(MAN3V3)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(MAN3V3)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_VM_MAN1V8, &risp);
+		VoltagesTemps[int(MAN1V8)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(MAN1V8)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_MON_5V0, &risp);
+		VoltagesTemps[int(MON5V0)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(MON5V0)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_MGT_AV, &risp);
+		VoltagesTemps[int(MGTAV)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(MGTAV)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_MGT_AVTT, &risp);
+		VoltagesTemps[int(MGAVTT)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(MGAVTT)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_INTERNAL_MCU_TEMP, &risp);
+		VoltagesTemps[int(INTTEMP)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(INTTEMP)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_BOARD_TEMP, &risp);
+		VoltagesTemps[int(BOARDTEMP)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(BOARDTEMP)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_FPGA0_TEMP, &risp);
+		VoltagesTemps[int(FPGA0TEMP)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(FPGA0TEMP)].alarmTHRupper = uint16_t(risp>>16);
+				
+		framRead(FRAM_ALARM_THR_FPGA1_TEMP, &risp);
+		VoltagesTemps[int(FPGA1TEMP)].alarmTHRdowner = uint16_t(risp); VoltagesTemps[int(FPGA1TEMP)].alarmTHRupper = uint16_t(risp>>16);
+
+		
+		
+		framWrite(FRAM_WARN_ALARM_UPDATE, 0x0); //Reset Registers
+
+}
+
 void SKAalarmManage(){
 	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
 		DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRupper);
-		delay_ms(500); // ONLY FOR TEST
+		//delay_ms(500); // ONLY FOR TEST
 	}	
 	if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
 		DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRdowner);
-		delay_ms(500); // ONLY FOR TEST
+		//delay_ms(500); // ONLY FOR TEST
 	}
 	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		SKAPower(0,0,0,0,0);
+		//SKAPower(0,0,0,0,0);
 		DEBUG_PRINT1("ADC ALARM %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
-		delay_ms(500); // ONLY FOR TEST
+		//delay_ms(500); // ONLY FOR TEST
 	}
 	if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		SKAPower(0,0,0,0,0);
+		//SKAPower(0,0,0,0,0);
 		DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
-		delay_ms(500); // ONLY FOR TEST
+		//delay_ms(500); // ONLY FOR TEST
 	}
+}
+
+int32_t SAMinternalTempConv(uint32_t raw) {
+	int32_t adc = raw;
+	//use device factory calibration values for temperature conversion (simplified)
+	uint32_t* tmpLogBase = (uint32_t*)0x00806030;
+	uint32_t tmpLog0 = tmpLogBase[0];
+	uint32_t tmpLog1 = tmpLogBase[1];
+	uint8_t roomInt = tmpLog0 & 0xff;
+	uint8_t roomFrac = (tmpLog0 >> 8) & 0x0f;
+	uint8_t hotInt = (tmpLog0 >> 12) & 0xff;
+	uint8_t hotFrac = (tmpLog0 >> 20) & 0x0f;
+	int32_t roomADC = ((tmpLog1 >> 8) & 0xfff) << 4;
+	int32_t hotADC = ((tmpLog1 >> 20) & 0xfff) << 4;
+	int32_t roomMdeg = 1000 * roomInt + 100 * roomFrac;
+	int32_t hotMdeg = 1000 * hotInt + 100 * hotFrac;
+	int32_t mdeg = roomMdeg + ((hotMdeg-roomMdeg) * (adc-roomADC)) / (hotADC-roomADC);
+	return mdeg;
 }
 
 void exchangeDataBlock(){
@@ -189,13 +322,15 @@ void exchangeDataBlock(){
 	framWrite(FRAM_ADC_VM_MAN1V8,			VoltagesTemps[9].ADCread);
 	framWrite(FRAM_ADC_MON_5V0,				VoltagesTemps[10].ADCread);
 	framWrite(FRAM_ADC_MGT_AV,				VoltagesTemps[11].ADCread);
-	framWrite(FRAM_ADC_MGT_AVTT,			VoltagesTemps[12].ADCread);
-	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	VoltagesTemps[13].ADCread);
+	framWrite(FRAM_ADC_MGT_AVTT,			VoltagesTemps[12].ADCread);	
+	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	SAMinternalTempConv(uint32_t(VoltagesTemps[13].ADCread)));
 	
 	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
 	
 	framRead(FRAM_WARN_ALARM_UPDATE, &res);
-	//if (res > 0x0) SKAchangeAlarmSettings();
+	if (res == 0x1) SKAalarmUpdate();
+	
+
 	
 // 	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
 // 	if (reg_ThresholdEnable && 0x80000000) {
@@ -478,10 +613,10 @@ void StartupStuff(void){
 
 	DEBUG_PRINT("Version: %x\n", _build_version);
 	DEBUG_PRINT("Date: %x\n", _build_date);
-	DEBUG_PRINT("Time: %x\n", _build_time);
+	DEBUG_PRINT("GIT Hash: %x\n", BUILD_GIT_HASH);
 	framWrite(FRAM_MCU_VERSION, _build_version);
 	framWrite(FRAM_MCU_COMPILE_DATE, _build_date);
-	framWrite(FRAM_MCU_COMPILE_TIME, _build_time);
+	framWrite(FRAM_MCU_GIT_HASH, BUILD_GIT_HASH);
 	
 	XO3_Read(itpm_cpld_regfile_date_code, &res);
 	DEBUG_PRINT("CPLD Version: %x\n", res);
@@ -508,12 +643,19 @@ static void timerSlow(const struct timer_task *const timer_task){
 }
 
 void taskSlow(){
+	uint32_t res;
 	gpio_toggle_pin_level(USR_LED0);
 	
-	TWIdataBlock();
-	exchangeDataBlock();
+	framRead(FRAM_MCU_VERSION, &res);
+	if (res == _build_version){
+		TWIdataBlock();
+		exchangeDataBlock();
+		
+		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
+	}
+	else DEBUG_PRINT1("ERROR no SPI bus comunication. Expected MCU version %x read %x\n", _build_version, res);
 	
-	framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
+
 	//DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);
 	if(pollingNew > 2000){
 		pollingNew = 2000;

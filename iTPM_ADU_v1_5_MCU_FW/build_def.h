@@ -4,6 +4,7 @@
 
 #define BUILD_DEFS_H
 
+#include "build_def_GitHash.h"
 
 // Example of __DATE__ string: "Jul 27 2012"
 //                              01234567890
