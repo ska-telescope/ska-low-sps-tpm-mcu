@@ -6,6 +6,10 @@
 
 #include "build_def_GitHash.h"
 
+#ifndef BUILD_GIT_HASH
+#define BUILD_GIT_HASH 0xffffffff
+#endif
+
 // Example of __DATE__ string: "Jul 27 2012"
 //                              01234567890
 
