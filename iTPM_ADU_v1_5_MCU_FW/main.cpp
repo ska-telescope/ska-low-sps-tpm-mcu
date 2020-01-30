@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000024;
+const uint32_t _build_version = 0xb0000025;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -97,6 +97,7 @@ uint32_t pollingOld = 1000;
 uint32_t pollingNew = 1000;
 
 bool TPMpowerLock = false;
+bool TPMoverride = false;
 
 /* -----------------------------------*/
 
@@ -611,24 +612,30 @@ void SKAsystemMonitorStart(){
 }
 
 int SKAenableCheck(void){
-	uint32_t ret, bypass;
-	XO3_Read(itpm_cpld_regfile_enable, &ret);
-	framRead(FRAM_TPM_ENABLE_BYPASS, &bypass);
+	uint32_t enable, enableshadow, bypass;
+	XO3_Read(itpm_cpld_regfile_enable, &enable);
+	XO3_Read(itpm_cpld_regfile_enable_shadow, &enableshadow);
+	XO3_Read(itpm_cpld_regfile_safety_override, &bypass);
 	
-	if (!TPMpowerLock){
-		XO3_WriteByte(itpm_cpld_regfile_enable_shadow, ret);
-		DEBUG_PRINT("Powered devices - %x\n", ret);
-		return 0;
-	}
-	else if (bypass == ENABLE_BYPASS_MAGIC){
-		XO3_WriteByte(itpm_cpld_regfile_enable_shadow, ret);
-		DEBUG_PRINT("Powered devices - %x - BYPASS ENFORCED\n", ret);
-		return 1;
-	}
-	else {
-		XO3_WriteByte(itpm_cpld_regfile_enable, 0x0);
-		DEBUG_PRINT("Power request DENIED for %x - Power Locked\n", ret);
-		return -1;
+	if (bypass == ENABLE_BYPASS_MAGIC) TPMoverride = true;
+	else TPMoverride = false;
+	
+	if (enable != enableshadow){
+		if (!TPMpowerLock){
+			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
+			DEBUG_PRINT("Powered devices - %x\n", enable);
+			return 0;
+		}
+		else if (TPMoverride){
+			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
+			DEBUG_PRINT("Powered devices - %x - BYPASS ENFORCED\n", enable);
+			return 1;
+		}
+		else {
+			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
+			DEBUG_PRINT("Power request DENIED for %x - Power Locked\n", enable);
+			return -1;
+		}
 	}
 }
 
