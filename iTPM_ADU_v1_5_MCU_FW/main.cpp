@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000022;
+const uint32_t _build_version = 0xb0000024;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -85,6 +85,7 @@ static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC
 
 bool irqTimerSlow = false;
 bool irqTimerFast = false;
+bool irqExternalFPGA = false;
 
 uint32_t ADT7408_temp_raw;
 uint16_t ADT7408_temp;
@@ -94,6 +95,8 @@ uint32_t reg_ThresholdEnable = 0;
 uint16_t reg_ThresholdVals [2][17];
 uint32_t pollingOld = 1000;
 uint32_t pollingNew = 1000;
+
+bool TPMpowerLock = false;
 
 /* -----------------------------------*/
 
@@ -144,7 +147,8 @@ void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VG
 	if (SYSRpwr)		tmp += 0x8;
 	if (VGApwr)			tmp += 0x10;
 	
-	XO3_WriteByte(itpm_cpld_regfile_enable, tmp);
+	XO3_WriteByte(itpm_cpld_regfile_enable_shadow, tmp);
+	//XO3_WriteByte(itpm_cpld_regfile_enable, tmp); // OLD
 	
 	DEBUG_PRINT("Powered devices ADC %d - Frontend %d - FPGA %d - SYSR %d - VGA %d\n", ADCpwr, FRONTENDpwr, FPGApwr, SYSRpwr, VGApwr);
 }
@@ -606,6 +610,49 @@ void SKAsystemMonitorStart(){
 	
 }
 
+int SKAenableCheck(void){
+	uint32_t ret, bypass;
+	XO3_Read(itpm_cpld_regfile_enable, &ret);
+	framRead(FRAM_TPM_ENABLE_BYPASS, &bypass);
+	
+	if (!TPMpowerLock){
+		XO3_WriteByte(itpm_cpld_regfile_enable_shadow, ret);
+		DEBUG_PRINT("Powered devices - %x\n", ret);
+		return 0;
+	}
+	else if (bypass == ENABLE_BYPASS_MAGIC){
+		XO3_WriteByte(itpm_cpld_regfile_enable_shadow, ret);
+		DEBUG_PRINT("Powered devices - %x - BYPASS ENFORCED\n", ret);
+		return 1;
+	}
+	else {
+		XO3_WriteByte(itpm_cpld_regfile_enable, 0x0);
+		DEBUG_PRINT("Power request DENIED for %x - Power Locked\n", ret);
+		return -1;
+	}
+}
+
+static void IRQfromFPGA(void){
+		irqExternalFPGA = true;
+}
+
+void IRQinternalFPGAhandler(void){
+		uint32_t irq_status, irq_mask;
+		
+		XO3_Read(itpm_cpld_intc_status, &irq_status);
+		XO3_Read(itpm_cpld_intc_mask, &irq_mask);
+		DEBUG_PRINT2("IRQ FPGA Val: %x - Mask %x\n", irq_status, irq_mask);
+		
+		// Call
+		
+		if (!(irq_mask & (irq_status & ENABLE_UPDATE_int))) SKAenableCheck(); // Verify if Enable can be 
+		
+		
+		XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int); // Clean FPGA IRQ
+		
+		irqExternalFPGA = false;
+}
+
 void StartupStuff(void){
 	uint32_t res;
 	
@@ -628,11 +675,18 @@ void StartupStuff(void){
 	
 	gpio_set_pin_level(USR_LED1, true);
 	
-	SKAPower(0,0,0,0,0);
+
 	
 	SKAsystemMonitorStart();
 	
 	StartupLoadSettings();
+	
+	// Interrupt Enable
+	XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int));
+	XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
+	ext_irq_register(XO3_LINK0, IRQfromFPGA);	
+	
+	
 	
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c2);
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c3);
@@ -642,7 +696,7 @@ void StartupStuff(void){
 
 static struct timer_task TIMER_0_task1, TIMER_0_task2;
 
-static void timerSlow(const struct timer_task *const timer_task){
+static void IRQtimerSlow(const struct timer_task *const timer_task){
 	irqTimerSlow = true; // Enable Task
 }
 
@@ -723,7 +777,7 @@ int main(void)
 	
 	
 	TIMER_0_task1.interval = 1000;
-	TIMER_0_task1.cb       = timerSlow;
+	TIMER_0_task1.cb       = IRQtimerSlow;
 	TIMER_0_task1.mode     = TIMER_TASK_REPEAT;
 // 	TIMER_0_task2.interval = 200;
 // 	TIMER_0_task2.cb       = TIMER_0_task2_cb;
@@ -742,6 +796,7 @@ int main(void)
 
 		ADCreadSingle();
 		
+		if (irqExternalFPGA) IRQinternalFPGAhandler();
 		if (irqTimerSlow) taskSlow();
 		
 	}

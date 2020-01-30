@@ -14,10 +14,23 @@ const uint16_t DEFAULT_POLLING_INTERVAL = 1000;
 // ---------------------------------------------------------------------------
 enum VoltTemps{SWAVDD1, SWAVDD2, SWAVDD3, MAN1V2, DDR0VREF, DDR1VREF, VMDRVDD, VINSCALED, MAN3V3, MAN1V8, MON5V0, MGTAV, MGAVTT, INTTEMP, BOARDTEMP, FPGA0TEMP, FPGA1TEMP}; 
 
+enum IRQfpgaMask{
+		I2C_int = 0x1,
+		UART_RX_int = 0x2,
+		WDT_SEM_EXPIRED_int = 0x4,
+		ALARM_UPDATE_int = 0x8,
+		ENABLE_UPDATE_int = 0x10,
+		TMP_EVENT_INT = 0x20,
+		XIL0_int = 0x40,
+		XIL1_int = 0x80,
+		MASK_default_int = 0xfff
+	};
+
 
 // THREASHOLDS = 32 bit - [31:15]Upper Threshold - [14:0] Lower Threshold
 
 const uint8_t SETTING_WARN_ALARM_UPDATE			= 0x0;
+const uint32_t ENABLE_BYPASS_MAGIC				= 0xDEAD70CC;
 
 // Supply
 

@@ -181,15 +181,15 @@
     </AcmeProjectConfig>
     <AsfFrameworkConfig>
       <framework-data>
-        <options />
-        <configurations />
-        <files />
-        <documentation help="" />
-        <offline-documentation help="" />
-        <dependencies>
-          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.38.0" />
-        </dependencies>
-      </framework-data>
+  <options />
+  <configurations />
+  <files />
+  <documentation help="" />
+  <offline-documentation help="" />
+  <dependencies>
+    <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.39.0" />
+  </dependencies>
+</framework-data>
     </AsfFrameworkConfig>
     <avrtool>com.atmel.avrdbg.tool.samice</avrtool>
     <avrtoolserialnumber>4294967295</avrtoolserialnumber>
