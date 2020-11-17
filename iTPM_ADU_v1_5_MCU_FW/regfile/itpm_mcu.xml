@@ -1,0 +1,106 @@
+<?xml version="1.0" ?>
+<node id="itpm_mcu">
+	<node address="0x90000000" description="Mcu Bios Version" hw_rst="0x0" id="MCU_VERSION" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000004" description="Mcu Bios compile date" hw_rst="0x0" id="MCU_COMPILE_DATE" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000008" description="Mcu GIT Hash" hw_rst="0x0" id="MCU_GIT_HASH" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x9000000C" description="MCU General Purpose Register" hw_rst="0x0" id="MCU_GPR_0" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000010" description="MCU General Purpose Register" hw_rst="0x0" id="MCU_GPR_1" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000014" description="MCU General Purpose Register" hw_rst="0x0" id="MCU_GPR_2" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000018" description="MCU General Purpose Register" hw_rst="0x0" id="MCU_GPR_3" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x9000001C" description="Polling time towards CPLD" hw_rst="0x0" id="MCU_POOLING_INTERVAL" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000008" description="Unused" hw_rst="0x0" id="FRAM_MCU_INTERNAL_COMMAND" permission="r" mask="0xffffffff" size="4"/>
+
+	<node address="0x900000E0" description="Board_status: stand-by, all-on, all-running" hw_rst="0x0" id="BOARD_STATUS" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x900000E4" description="Board Alarm:
+										[0x1] SW_AVDD1
+										[0x2] ADC_SW_AVDD2
+										[0x4] ADC_AVDD3
+										[0x8] ADC_MAN_1V2
+										[0x10] ADC_DDR0_VREF
+										[0x20] ADC_DDR1_VREF
+										[0x40] ADC_VM_DRVDD
+										[0x80] ADC_VIN_SCALED
+										[0x100] ADC_VM_MAN3V3
+										[0x200] ADC_VM_MAN1V8
+										[0x400] ADC_MON_5V0
+										[0x800] ADC_MGT_AV
+										[0x1000] ADC_MGT_AVTT
+										[0x2000] ADC_INTERNAL_MCU_TEMP
+										[0x4000] BOARD_TEMP
+										[0x8000] FPGA0_TEMP
+										[0x10000] FPGA1_TEMP" hw_rst="0x0" id="BOARD_ALARM" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x900000E8" description="Board Warning:
+										[0x1] SW_AVDD1
+										[0x2] ADC_SW_AVDD2
+										[0x4] ADC_AVDD3
+										[0x8] ADC_MAN_1V2
+										[0x10] ADC_DDR0_VREF
+										[0x20] ADC_DDR1_VREF
+										[0x40] ADC_VM_DRVDD
+										[0x80] ADC_VIN_SCALED
+										[0x100] ADC_VM_MAN3V3
+										[0x200] ADC_VM_MAN1V8
+										[0x400] ADC_MON_5V0
+										[0x800] ADC_MGT_AV
+										[0x1000] ADC_MGT_AVTT
+										[0x2000] ADC_INTERNAL_MCU_TEMP
+										[0x4000] BOARD_TEMP
+										[0x8000] FPGA0_TEMP
+										[0x10000] FPGA1_TEMP" hw_rst="0x0" id="BOARD_WARNING" permission="r" mask="0xffffffff" size="4"/>
+	
+	<node address="0x90000100" description="SW_AVDD1 Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_SW_AVDD1" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000104" description="ADC_SW_AVDD2 Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_SW_AVDD2" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000108" description="ADC_AVDD3 Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_AVDD3" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x9000010C" description="ADC_MAN_1V2 Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_MAN_1V2" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000110" description="ADC_DDR0_VREF Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_DDR0_VREF" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000114" description="ADC_DDR1_VREF Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_DDR1_VREF" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000118" description="ADC_VM_DRVDD Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_VM_DRVDD" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x9000011C" description="ADC_VIN_SCALED Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_VIN_SCALED" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000120" description="ADC_VM_MAN3V3 Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_VM_MAN3V3" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000124" description="ADC_VM_MAN1V8 Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_VM_MAN1V8" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000128" description="ADC_MON_5V0 Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_MON_5V0" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x9000012C" description="ADC_MGT_AV Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_MGT_AV" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000130" description="ADC_MGT_AVTT Voltage, to be written to CPLD" hw_rst="0x0" id="ADC_MGT_AVTT" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000134" description="ADC_INTERNAL_MCU_TEMP Temperature, to be written to CPLD" hw_rst="0x0" id="ADC_INTERNAL_MCU_TEMP" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000138" description="BOARD_TEMP Temperature, to be written to CPLD" hw_rst="0x0" id="BOARD_TEMP" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x9000013C" description="FPGA0_TEMP Temperature, to be written to CPLD" hw_rst="0x0" id="FPGA0_TEMP" permission="r" mask="0xffffffff" size="4"/>
+	<node address="0x90000140" description="FPGA1_TEMP Temperature, to be written to CPLD" hw_rst="0x0" id="FPGA1_TEMP" permission="r" mask="0xffffffff" size="4"/>
+	
+	<node address="0x90000190" description="Alarm enable bitmask" hw_rst="0x0" id="THRESHOLD_ENABLE_MASK" permission="rw" mask="0xffffffff" size="4"/> <!-- Nella versione consegnata a monica, questo registro si chiama FRAM_WARN_ALARM_UPDATE e serviva per fare l'update dei registri di WARN/ALLARME; gl allarmi erano totalmente spenti da codice/!-->
+	<node address="0x90000194" description="Alarm settings for SW_AVDD1: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_SW_AVDD1" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x90000198" description="Alarm settings for ADC_SW_AVDD2: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_SW_AVDD2" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x9000019C" description="Alarm settings for ADC_AVDD3: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_AVDD3" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001A0" description="Alarm settings for ADC_MAN_1V2: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_MAN_1V2" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001A4" description="Alarm settings for ADC_DDR0_VREF: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_DDR0_VREF" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001A8" description="Alarm settings for ADC_DDR1_VREF: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_DDR1_VREF" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001AC" description="Alarm settings for ADC_VM_DRVDD: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_VM_DRVDD" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001B0" description="Alarm settings for ADC_VIN_SCALED: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_VIN_SCALED" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001B4" description="Alarm settings for ADC_VM_MAN3V3: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_VM_MAN3V3" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001B8" description="Alarm settings for ADC_VM_MAN1V8: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_VM_MAN1V8" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001BC" description="Alarm settings for ADC_MON_5V0: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_MON_5V0" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001C0" description="Alarm settings for ADC_MGT_AV: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_MGT_AV" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001C4" description="Alarm settings for ADC_MGT_AVTT: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_MGT_AVTT" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001C8" description="Alarm settings for ADC_INTERNAL_MCU_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_INTERNAL_MCU_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001CC" description="Alarm settings for BOARD_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_BOARD_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001D0" description="Alarm settings for FPGA0_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_FPGA0_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001D4" description="Alarm settings for FPGA1_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="WARN_THR_FPGA1_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+	
+	<node address="0x90000194" description="Warning settings for SW_AVDD1: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_SW_AVDD1" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x90000198" description="Warning settings for ADC_SW_AVDD2: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_SW_AVDD2" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x9000019C" description="Warning settings for ADC_AVDD3: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_AVDD3" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001A0" description="Warning settings for ADC_MAN_1V2: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_MAN_1V2" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001A4" description="Warning settings for ADC_DDR0_VREF: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_DDR0_VREF" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001A8" description="Warning settings for ADC_DDR1_VREF: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_DDR1_VREF" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001AC" description="Warning settings for ADC_VM_DRVDD: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_VM_DRVDD" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001B0" description="Warning settings for ADC_VIN_SCALED: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_VIN_SCALED" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001B4" description="Warning settings for ADC_VM_MAN3V3: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_VM_MAN3V3" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001B8" description="Warning settings for ADC_VM_MAN1V8: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_VM_MAN1V8" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001BC" description="Warning settings for ADC_MON_5V0: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_MON_5V0" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001C0" description="Warning settings for ADC_MGT_AV: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_MGT_AV" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001C4" description="Warning settings for ADC_MGT_AVTT: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_MGT_AVTT" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001C8" description="Warning settings for ADC_INTERNAL_MCU_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_INTERNAL_MCU_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001CC" description="Warning settings for BOARD_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_BOARD_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001D0" description="Warning settings for FPGA0_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_FPGA0_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+	<node address="0x900001D4" description="Warning settings for FPGA1_TEMP: MAX[31:15] - MIN[14:0]" hw_rst="0x0" id="ALARM_THR_FPGA1_TEMP" permission="rw" mask="0xffffffff" size="4"/>
+</node>
+<!-- This file has been automatically generated using xml2vhdl.py version 1.15 /!-->

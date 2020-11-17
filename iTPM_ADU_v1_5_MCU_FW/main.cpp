@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000025;
+const uint32_t _build_version = 0xb0000026;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -72,6 +72,7 @@ struct ADCstruct {
 	uint16_t alarmTHRdowner;
 	uint16_t warningTHRupper;
 	uint16_t warningTHRdowner;
+	bool alarmTriggered;
 	bool enabled;
 	};
 	
@@ -538,7 +539,7 @@ void SKAsystemMonitorStart(){
 	
 	// ADC8 - PB00 - VIN_SCALED
 	VoltagesTemps[7].ADCpin				= 8;
-	VoltagesTemps[7].divider			= 12.5; // 12000/960
+	VoltagesTemps[7].divider			= VIN_SCALED_DIVIDER;  // 12.5; // 12000/960
 	VoltagesTemps[7].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VIN_SCALED>>16);
 	VoltagesTemps[7].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VIN_SCALED);
 	VoltagesTemps[7].warningTHRupper	= uint16_t(SETTING_WARN_THR_VIN_SCALED>>16);
@@ -547,7 +548,7 @@ void SKAsystemMonitorStart(){
 	
 	// ADC9 - PB01 - VM_MAN3V3
 	VoltagesTemps[8].ADCpin				= 9;
-	VoltagesTemps[8].divider			= 0;
+	VoltagesTemps[8].divider			= VM_MAN3V3_DIVIDER; // 3.74782; // 3300 / 880.51
 	VoltagesTemps[8].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3>>16);
 	VoltagesTemps[8].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3);
 	VoltagesTemps[8].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_MAN3V3>>16);
@@ -555,7 +556,7 @@ void SKAsystemMonitorStart(){
 	
 	// ADC10 - PB02 - VM_MAN1V8
 	VoltagesTemps[9].ADCpin				= 10;
-	VoltagesTemps[9].divider			= 0;
+	VoltagesTemps[9].divider			= VM_MAN1V8_DIVIDER; // 2.73914; // 1800/657,14
 	VoltagesTemps[9].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8>>16);
 	VoltagesTemps[9].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8);
 	VoltagesTemps[9].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_MAN1V8>>16);
@@ -563,7 +564,7 @@ void SKAsystemMonitorStart(){
 	
 	// ADC11 - PB03 - MON_5V0
 	VoltagesTemps[10].ADCpin			= 11;
-	VoltagesTemps[10].divider			= 2.739726; // 5000/1825)
+	VoltagesTemps[10].divider			= MON_5V0_DIVIDER; // 2.739726; // 5000/1825
 	VoltagesTemps[10].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MON_5V0>>16);
 	VoltagesTemps[10].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MON_5V0);
 	VoltagesTemps[10].warningTHRupper	= uint16_t(SETTING_WARN_THR_MON_5V0>>16);
@@ -604,6 +605,7 @@ void SKAsystemMonitorStart(){
 	DEBUG_PRINT2("Temps and Voltages Loaded:\n");
 	for (int i = 0; i < (ADCCOLUMNS + TEMPS_SENSOR); i++){
 		VoltagesTemps[i].ADCread = 0;
+		VoltagesTemps[i].alarmTriggered = false;
 		DEBUG_PRINT2("PIN %d - Divider %f\n", VoltagesTemps[i].ADCpin, VoltagesTemps[i].divider);
 	}
 	
@@ -698,6 +700,8 @@ void StartupStuff(void){
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c2);
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c3);
 	
+	framWrite(FRAM_MCU_COUNTER, 0);
+	
 	DEBUG_PRINT("Startup Done\n");	
 }
 
@@ -708,7 +712,7 @@ static void IRQtimerSlow(const struct timer_task *const timer_task){
 }
 
 void taskSlow(){
-	uint32_t res;
+	uint32_t res, res2;
 	gpio_toggle_pin_level(USR_LED0);
 	
 	framRead(FRAM_MCU_VERSION, &res);
@@ -717,6 +721,8 @@ void taskSlow(){
 		exchangeDataBlock();
 		
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
+		framRead(FRAM_MCU_COUNTER, &res2);
+		framWrite(FRAM_MCU_COUNTER, res2++);
 	}
 	else DEBUG_PRINT1("ERROR no SPI bus comunication. Expected MCU version %x read %x\n", _build_version, res);
 	
@@ -724,6 +730,7 @@ void taskSlow(){
 	//DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);
 	if(pollingNew > 2000){
 		pollingNew = 2000;
+		framWrite(FRAM_MCU_POOLING_INTERVAL, 2000);
 	}
 	if (pollingOld != pollingNew){
 		timer_stop(&TIMER_0);

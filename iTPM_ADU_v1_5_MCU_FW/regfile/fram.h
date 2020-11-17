@@ -25,6 +25,7 @@
 #define	FRAM_MCU_GPR_3						0x00000018 //RW - 32 bit
 #define FRAM_MCU_POOLING_INTERVAL			0x0000001C //RW - 32 bit
 #define FRAM_MCU_INTERNAL_COMMAND			0x00000020 //RW - 32 bit
+#define FRAM_MCU_COUNTER					0x00000024 //RW - 32 bit
 
 #define FRAM_BOARD_STATUS					0x000000E0 //RW - 32 bit
 #define FRAM_BOARD_ALARM					0x000000E4 //RW - 32 bit 

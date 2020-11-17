@@ -13,6 +13,7 @@ const uint16_t DEFAULT_POLLING_INTERVAL = 1000;
 
 // ---------------------------------------------------------------------------
 enum VoltTemps{SWAVDD1, SWAVDD2, SWAVDD3, MAN1V2, DDR0VREF, DDR1VREF, VMDRVDD, VINSCALED, MAN3V3, MAN1V8, MON5V0, MGTAV, MGAVTT, INTTEMP, BOARDTEMP, FPGA0TEMP, FPGA1TEMP}; 
+	
 
 enum IRQfpgaMask{
 		I2C_int = 0x1,
@@ -25,7 +26,12 @@ enum IRQfpgaMask{
 		XIL1_int = 0x80,
 		MASK_default_int = 0xfff
 	};
-
+	
+// VOLTAGE DIVIDERS
+const float VIN_SCALED_DIVIDER						= 12.5; // 12000/960
+const float VM_MAN3V3_DIVIDER						= 3.74782; // 3300 / 880.51
+const float VM_MAN1V8_DIVIDER						= 2.73914; // 1800/657,14
+const float MON_5V0_DIVIDER							= 2.739726; // 5000/1825
 
 // THREASHOLDS = 32 bit - [31:15]Upper Threshold - [14:0] Lower Threshold
 
