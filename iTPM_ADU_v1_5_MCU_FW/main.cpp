@@ -723,6 +723,7 @@ void taskSlow(){
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
 		framRead(FRAM_MCU_COUNTER, &res2);
 		framWrite(FRAM_MCU_COUNTER, res2++);
+		framRead(FRAM_ADC_MGT_AVTT, &res2);
 	}
 	else DEBUG_PRINT1("ERROR no SPI bus comunication. Expected MCU version %x read %x\n", _build_version, res);
 	
