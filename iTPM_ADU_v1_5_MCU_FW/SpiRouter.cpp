@@ -135,8 +135,20 @@ SPI_sync(
 		transfer.rxbuf = rxbuf;
 		transfer.txbuf = tmp;
 		transfer.size  = _count;
+		
+		struct spi_xfer check_busy;
+		uint8_t busy_tx[] = { 0xff };
+		uint8_t busy_rx[8];
+		check_busy.rxbuf = busy_rx;
+		check_busy.txbuf = busy_tx;
+		check_busy.size = 1;
 
-		gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS	
+		gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS
+		for (int i = 0; i < 2000; i++){
+			int32_t risp = spi_m_sync_transfer(&SPI_0, &check_busy);
+			if (busy_rx[0] == 0) i = 2200;
+		}		
+			
 		/*for(int i=0;i<_count;i++){
 			//spi_write(SPI_MASTER, tmp[i], 0, 0);
 			//rxbuf[i]=SPI1.transfer(tmp[i]);
@@ -219,7 +231,7 @@ XO3_Read(
   uint32_t dato=0;
   memset(txBuffer, 0, 8);
 
-  txBuffer[0] = 0x03;
+  txBuffer[0] = 0x05;
   txBuffer[1] = 0xFF & (regs >> 24);
   txBuffer[2] = 0xFF & (regs >> 16);
   txBuffer[3] = 0xFF & (regs >> 8);
