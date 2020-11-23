@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000026;
+const uint32_t _build_version = 0xb0000100;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -99,6 +99,9 @@ uint32_t pollingNew = 1000;
 
 bool TPMpowerLock = false;
 bool TPMoverride = false;
+
+uint32_t InternalCounter_CPLD_update = 0;
+uint32_t InternalCounter_ADC_update = 0;
 
 /* -----------------------------------*/
 
@@ -337,6 +340,8 @@ void exchangeDataBlock(){
 	
 	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
 	
+	framWrite(FRAM_MCU_COMPLETE_ADC_COUNTER, InternalCounter_ADC_update);	
+	
 	framRead(FRAM_WARN_ALARM_UPDATE, &res);
 	if (res == 0x1) SKAalarmUpdate();
 	
@@ -380,6 +385,7 @@ void ADCreadSingle() { // Single read, much FASTER
 		if (anaReadPos >= ADCCOLUMNS-1){
 			anaReadPos = 0;
 			anaNotReady = false;
+			InternalCounter_ADC_update++;
 		}
 		else anaReadPos++;
 		ADC->INPUTCTRL.bit.MUXPOS = VoltagesTemps[anaReadPos].ADCpin;
@@ -646,6 +652,7 @@ static void IRQfromFPGA(void){
 }
 
 void IRQinternalFPGAhandler(void){
+		return;
 		uint32_t irq_status, irq_mask;
 		
 		XO3_Read(itpm_cpld_intc_status, &irq_status);
@@ -691,16 +698,17 @@ void StartupStuff(void){
 	StartupLoadSettings();
 	
 	// Interrupt Enable
-	XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int));
-	XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
-	ext_irq_register(XO3_LINK0, IRQfromFPGA);	
+	//XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int));
+	//XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
+	//ext_irq_register(XO3_LINK0, IRQfromFPGA);	
 	
 	
 	
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c2);
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c3);
 	
-	framWrite(FRAM_MCU_COUNTER, 0);
+	framWrite(FRAM_MCU_COUNTER, InternalCounter_CPLD_update);
+	framWrite(FRAM_MCU_COUNTER, InternalCounter_ADC_update);
 	
 	DEBUG_PRINT("Startup Done\n");	
 }
@@ -721,8 +729,8 @@ void taskSlow(){
 		exchangeDataBlock();
 		
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
-		framRead(FRAM_MCU_COUNTER, &res2);
-		framWrite(FRAM_MCU_COUNTER, res2++);
+		InternalCounter_CPLD_update++;
+		framWrite(FRAM_MCU_COUNTER, InternalCounter_CPLD_update);
 		framRead(FRAM_ADC_MGT_AVTT, &res2);
 	}
 	else DEBUG_PRINT1("ERROR no SPI bus comunication. Expected MCU version %x read %x\n", _build_version, res);
