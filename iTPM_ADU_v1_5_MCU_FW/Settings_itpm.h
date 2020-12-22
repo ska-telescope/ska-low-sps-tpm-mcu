@@ -9,6 +9,22 @@
 #ifndef SETTINGS_ITPM_H_
 #define SETTINGS_ITPM_H_
 
+/*
+ * ----- RAM BOOT Map ----------------------------
+ */
+static uint32_t *ram = (uint32_t *)HMCRAMC0_ADDR;
+
+#define RAM_BOOT_TYPE				ram[0]
+#define RAM_BOOT_TYPE_SHIFT			ram[1]
+#define RAM_DATA1					ram[2]
+#define RAM_DATA2					ram[3]
+#define RAM_DATA3					ram[4]
+#define RAM_BL_VERSION				ram[6]
+#define RAM_STATUS					ram[7]
+
+#define BL_REQUEST_COPYNV			0xFEEDB007
+#define BL_REQUEST_BOOT				0xB007B007
+
 const uint16_t DEFAULT_POLLING_INTERVAL = 1000;
 
 // ---------------------------------------------------------------------------
@@ -24,6 +40,7 @@ enum IRQfpgaMask{
 		TMP_EVENT_INT = 0x20,
 		XIL0_int = 0x40,
 		XIL1_int = 0x80,
+		SingleWireErr_int = 0x100,
 		MASK_default_int = 0xfff
 	};
 	

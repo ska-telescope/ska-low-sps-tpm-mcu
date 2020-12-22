@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000100;
+const uint32_t _build_version = 0xb0000102;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -681,9 +681,11 @@ void StartupStuff(void){
 	DEBUG_PRINT("Version: %x\n", _build_version);
 	DEBUG_PRINT("Date: %x\n", _build_date);
 	DEBUG_PRINT("GIT Hash: %x\n", BUILD_GIT_HASH);
+	DEBUG_PRINT("Bootloader Version: %x\n", RAM_BL_VERSION);
 	framWrite(FRAM_MCU_VERSION, _build_version);
 	framWrite(FRAM_MCU_COMPILE_DATE, _build_date);
 	framWrite(FRAM_MCU_GIT_HASH, BUILD_GIT_HASH);
+	framWrite(FRAM_MCU_BOOTLOADER_VERSION, RAM_BL_VERSION);
 	
 	XO3_Read(itpm_cpld_regfile_date_code, &res);
 	DEBUG_PRINT("CPLD Version: %x\n", res);
@@ -709,6 +711,7 @@ void StartupStuff(void){
 	
 	framWrite(FRAM_MCU_COUNTER, InternalCounter_CPLD_update);
 	framWrite(FRAM_MCU_COUNTER, InternalCounter_ADC_update);
+	framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0xFFFFFFFF);
 	
 	DEBUG_PRINT("Startup Done\n");	
 }
@@ -747,6 +750,23 @@ void taskSlow(){
 		timer_start(&TIMER_0);
 		pollingOld = pollingNew;
 		DEBUG_PRINT("Pooling Time Changed to %d\n", pollingNew);
+	}
+	
+	framRead(FRAM_MCU_BOOTLOADER_COMMANDS, &res2);
+	if (res2 < 0xffffffff){
+		if (res2 == BL_REQUEST_BOOT){
+			RAM_BOOT_TYPE = BL_REQUEST_BOOT;
+			RAM_BOOT_TYPE_SHIFT = (BL_REQUEST_BOOT >> 1);
+			
+			framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0x1);
+			DEBUG_PRINT("Requested Jump to Bootloader, Goodbye!");
+			
+			delay_ms(5);
+			NVIC_SystemReset();
+		}
+		else{
+			framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0xFFFFFFFF);
+		}
 	}
 	
 	irqTimerSlow = false; // Disable Task untile next IRQ

@@ -35,8 +35,8 @@ SEARCH_DIR(.)
 /* Memory Spaces Definitions */
 MEMORY
 {
-  rom      (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00040000
-  ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
+  rom      (rx)  : ORIGIN = 0x00000000+0x2000, LENGTH = 0x00040000-0x2000 /* First 8KB used by bootloader */
+  ram      (rwx) : ORIGIN = 0x20000020, LENGTH = 0x00008000-0x0004-0x0020 /* 4 bytes used by bootloader to keep data between resets */
 }
 
 /* The stack size used by the application. NOTE: you need to adjust according to your application. */
