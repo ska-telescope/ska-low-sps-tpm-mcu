@@ -652,7 +652,6 @@ static void IRQfromFPGA(void){
 }
 
 void IRQinternalFPGAhandler(void){
-		return;
 		uint32_t irq_status, irq_mask;
 		
 		XO3_Read(itpm_cpld_intc_status, &irq_status);

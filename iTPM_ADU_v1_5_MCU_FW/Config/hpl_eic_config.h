@@ -186,7 +186,7 @@
 // <i> This defines input sense trigger
 // <id> eic_arch_sense3
 #ifndef CONF_EIC_SENSE3
-#define CONF_EIC_SENSE3 EIC_NMICTRL_NMISENSE_HIGH_Val
+#define CONF_EIC_SENSE3 EIC_NMICTRL_NMISENSE_FALL_Val
 #endif
 // </e>
 
