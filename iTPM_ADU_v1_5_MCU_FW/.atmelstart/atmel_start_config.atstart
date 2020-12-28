@@ -2,12 +2,17 @@ format_version: '2'
 name: iTPM_ADU_v1_5_MCU_FW
 versions:
   api: '1.0'
-  backend: 1.6.148
-  commit: 605f106ab95776472e3febf2fac2471441fb1816
-  content: 1.0.1686
-  content_pack_name: acme-packs-all
+  backend: 1.8.491
+  commit: 605bd5a7663644fb84783aa2b00942b79b0d8955
+  content: unknown
+  content_pack_name: unknown
   format: '2'
-  frontend: 1.6.1894
+  frontend: 1.8.491
+  packs_version_avr8: 1.0.1446
+  packs_version_qtouch: unknown
+  packs_version_sam: 1.0.1726
+  version_backend: 1.8.491
+  version_frontend: ''
 board:
   identifier: CustomBoard
   device: SAMD21J18A-AF
@@ -217,7 +222,7 @@ drivers:
       eic_arch_sense14: No detection
       eic_arch_sense15: No detection
       eic_arch_sense2: No detection
-      eic_arch_sense3: Falling-edge detection
+      eic_arch_sense3: Rising-edge detection
       eic_arch_sense4: No detection
       eic_arch_sense5: No detection
       eic_arch_sense6: No detection
@@ -271,14 +276,34 @@ drivers:
     functionality: System
     api: HAL:HPL:GCLK
     configuration:
+      $input: 400000
+      $input_id: External Crystal Oscillator 0.4-32MHz (XOSC)
+      RESERVED_InputFreq: 400000
+      RESERVED_InputFreq_id: External Crystal Oscillator 0.4-32MHz (XOSC)
+      _$freq_output_Generic clock generator 0: 48000000
+      _$freq_output_Generic clock generator 1: 32768
+      _$freq_output_Generic clock generator 2: 400000
+      _$freq_output_Generic clock generator 3: 8000000
+      _$freq_output_Generic clock generator 4: 400000
+      _$freq_output_Generic clock generator 5: 400000
+      _$freq_output_Generic clock generator 6: 400000
+      _$freq_output_Generic clock generator 7: 400000
       enable_gclk_gen_0: true
+      enable_gclk_gen_0__externalclock: 1000000
       enable_gclk_gen_1: true
+      enable_gclk_gen_1__externalclock: 1000000
       enable_gclk_gen_2: false
+      enable_gclk_gen_2__externalclock: 1000000
       enable_gclk_gen_3: true
+      enable_gclk_gen_3__externalclock: 1000000
       enable_gclk_gen_4: false
+      enable_gclk_gen_4__externalclock: 1000000
       enable_gclk_gen_5: false
+      enable_gclk_gen_5__externalclock: 1000000
       enable_gclk_gen_6: false
+      enable_gclk_gen_6__externalclock: 1000000
       enable_gclk_gen_7: false
+      enable_gclk_gen_7__externalclock: 1000000
       gclk_arch_gen_0_RUNSTDBY: false
       gclk_arch_gen_0_enable: true
       gclk_arch_gen_0_idc: true
@@ -353,6 +378,11 @@ drivers:
     functionality: System
     api: HAL:HPL:PM
     configuration:
+      $input: 48000000
+      $input_id: Generic clock generator 0
+      RESERVED_InputFreq: 48000000
+      RESERVED_InputFreq_id: Generic clock generator 0
+      _$freq_output_CPU: 48000000
       apba_div: '1'
       apbb_div: '1'
       apbc_div: '1'
@@ -839,6 +869,14 @@ drivers:
     functionality: System
     api: HAL:HPL:SYSCTRL
     configuration:
+      $input: 8000000
+      $input_id: Generic clock generator 3
+      RESERVED_InputFreq: 8000000
+      RESERVED_InputFreq_id: Generic clock generator 3
+      _$freq_output_8MHz Internal Oscillator (OSC8M): 8000000
+      _$freq_output_Digital Frequency Locked Loop (DFLL48M): 48000000
+      _$freq_output_External Crystal Oscillator 0.4-32MHz (XOSC): 400000
+      _$freq_output_Fractional Digital Phase Locked Loop (FDPLL96M): 11718500000
       dfll48m_arch_bplckc: false
       dfll48m_arch_calibration: true
       dfll48m_arch_ccdis: false
