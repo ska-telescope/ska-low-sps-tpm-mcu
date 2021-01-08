@@ -350,10 +350,40 @@ void exchangeDataBlock(){
 	framRead(FRAM_WARN_ALARM_UPDATE, &res);
 	if (res == 0x1) SKAalarmUpdate();
 	
-	XO3_Read((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
-	framWrite(FRAM_FPGA0_FE_CURRENT, res);
-	XO3_Read((xil_sysmon_fpga1_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF), &res);
-	framWrite(FRAM_FPGA1_FE_CURRENT, res);
+	uint32_t xil;
+	uint32_t xil_done = 0xfffffff;
+	uint32_t xil_init = 0xfffffff;
+	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
+	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
+	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_init_M, itpm_cpld_regfile_xilinx_init_B,&xil_init);
+	
+	XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
+	DEBUG_PRINT2("Xilinx Done - %x - Xilinx Init %x - Enable Xilinx - %x\n", xil_done, xil_init, res);
+	static uint32_t timer = 0;
+	if (res & 0x4) { // EnableShadow Reg
+		if (((xil_done == 1) && (xil_init == 1)) || ((xil_done == 3) && (xil_init == 3))){
+			timer++;
+			DEBUG_PRINT2("Timer 0 Hit\n");
+			if (timer > 10){
+				// Xilinx System Monitor load base address from CPLD
+				//XO3_Read(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
+				XO3_Read((XIL_SYSMON_FIXED_FPGA0_OFFSET+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
+				framWrite(FRAM_FPGA0_FE_CURRENT, res);
+				DEBUG_PRINT2("Xilinx SysMon FE Current 0 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga0_offset);
+			}
+		}
+		if (((xil_done == 2) && (xil_init == 2)) || ((xil_done == 3) && (xil_init == 3))){
+			timer++;
+			DEBUG_PRINT2("Timer 1 Hit\n");
+			if (timer > 10){
+				// Xilinx System Monitor load base address from CPLD
+				//XO3_Read(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
+				XO3_Read((XIL_SYSMON_FIXED_FPGA1_OFFSET+XIL_SYSMON_FPGA1_FE_CURRENT_OFF), &res);
+				framWrite(FRAM_FPGA1_FE_CURRENT, res);
+				DEBUG_PRINT2("Xilinx SysMon FE Current 1 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga1_offset);
+			}
+		}
+	}
 	
 // 	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
 // 	if (reg_ThresholdEnable && 0x80000000) {
@@ -734,19 +764,16 @@ void StartupStuff(void){
 	
 	gpio_set_pin_level(USR_LED1, true);
 	
+	XO3_WriteByte(itpm_cpld_regfile_enable_shadow, EnableShadowRegister);
 
 	
 	SKAsystemMonitorStart();
 	
 	StartupLoadSettings();
 	
-	// Xilinx System Monitor load base address from CPLD
-	XO3_Read(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
-	XO3_Read(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
-	
 	// Interrupt Enable
-	//XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int));
-	//XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
+	XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int));
+	XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
 	ext_irq_register(XO3_LINK0, IRQfromFPGA);	
 	
 	

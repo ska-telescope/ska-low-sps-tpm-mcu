@@ -12,6 +12,9 @@
 #define XIL_SYSMON_FPGA0_OFFSET		0x00000010 // Register with sys monitor base address FPGA0
 #define XIL_SYSMON_FPGA1_OFFSET		0x10000010 // Register with sys monitor base address FPGA1
 
+#define XIL_SYSMON_FIXED_FPGA0_OFFSET		0x80000
+#define XIL_SYSMON_FIXED_FPGA1_OFFSET		0x10080000
+
 #define XIL_SYSMON_FPGA0_FE_CURRENT_OFF		0x448
 #define XIL_SYSMON_FPGA1_FE_CURRENT_OFF		0x460
 
