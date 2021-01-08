@@ -58,12 +58,13 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000103;
+const uint32_t _build_version = 0xb0000104;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
 #define ADCCOLUMNS 14
 #define TEMPS_SENSOR 3
+#define FPGA_FE_CURRENT 2
 struct ADCstruct {
 	int ADCpin;
 	uint16_t ADCread;
@@ -76,7 +77,7 @@ struct ADCstruct {
 	bool enabled;
 	};
 	
-struct ADCstruct VoltagesTemps[ADCCOLUMNS+TEMPS_SENSOR]; // +3 Temperatures
+struct ADCstruct VoltagesTemps[ADCCOLUMNS+TEMPS_SENSOR+FPGA_FE_CURRENT]; // +3 Temperatures + 2 FE_CURRENT
 int anaReadPos = 0;
 bool anaNotReady = true;
 
@@ -97,11 +98,15 @@ uint16_t reg_ThresholdVals [2][17];
 uint32_t pollingOld = 1000;
 uint32_t pollingNew = 1000;
 
+uint32_t EnableShadowRegister = 0;
+
 bool TPMpowerLock = false;
 bool TPMoverride = false;
 
 uint32_t InternalCounter_CPLD_update = 0;
 uint32_t InternalCounter_ADC_update = 0;
+
+uint32_t xil_sysmon_fpga0_offset, xil_sysmon_fpga1_offset;
 
 /* -----------------------------------*/
 
@@ -345,7 +350,10 @@ void exchangeDataBlock(){
 	framRead(FRAM_WARN_ALARM_UPDATE, &res);
 	if (res == 0x1) SKAalarmUpdate();
 	
-
+	XO3_Read((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
+	framWrite(FRAM_FPGA0_FE_CURRENT, res);
+	XO3_Read((xil_sysmon_fpga1_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF), &res);
+	framWrite(FRAM_FPGA1_FE_CURRENT, res);
 	
 // 	framRead(FRAM_THRESHOLD_ENABLE_MASK, &reg_ThresholdEnable);
 // 	if (reg_ThresholdEnable && 0x80000000) {
@@ -454,6 +462,8 @@ void StartupLoadSettings(void){
 	framWrite(FRAM_WARN_THR_BOARD_TEMP			, SETTING_WARN_THR_BOARD_TEMP			);
 	framWrite(FRAM_WARN_THR_FPGA0_TEMP			, SETTING_WARN_THR_FPGA0_TEMP			);
 	framWrite(FRAM_WARN_THR_FPGA1_TEMP			, SETTING_WARN_THR_FPGA1_TEMP			);
+	framWrite(FRAM_WARN_THR_FPGA0_FE_CURRENT	, SETTING_WARN_THR_FPGA0_FE_CURRENT		);
+	framWrite(FRAM_WARN_THR_FPGA1_FE_CURRENT	, SETTING_WARN_THR_FPGA1_FE_CURRENT		);
 	
 	framWrite(FRAM_ALARM_THR_SW_AVDD1			, SETTING_ALARM_THR_SW_AVDD1			);
 	framWrite(FRAM_ALARM_THR_SW_AVDD2			, SETTING_ALARM_THR_SW_AVDD2			);
@@ -472,6 +482,8 @@ void StartupLoadSettings(void){
 	framWrite(FRAM_ALARM_THR_BOARD_TEMP			, SETTING_ALARM_THR_BOARD_TEMP			);
 	framWrite(FRAM_ALARM_THR_FPGA0_TEMP			, SETTING_ALARM_THR_FPGA0_TEMP			);
 	framWrite(FRAM_ALARM_THR_FPGA1_TEMP			, SETTING_ALARM_THR_FPGA1_TEMP			);
+	framWrite(FRAM_ALARM_THR_FPGA0_FE_CURRENT	, SETTING_ALARM_THR_FPGA0_FE_CURRENT	);
+	framWrite(FRAM_ALARM_THR_FPGA1_FE_CURRENT	, SETTING_ALARM_THR_FPGA1_FE_CURRENT	);
 	
 }
 
@@ -486,130 +498,145 @@ void SKAsystemMonitorStart(){
 	
 	// Voltages	
 	// ADC4 - PA04 - SW_AVDD1	
-	VoltagesTemps[0].ADCpin				= 4;
-	VoltagesTemps[0].divider			= 0;
-	VoltagesTemps[0].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_SW_AVDD1>>16);
-	VoltagesTemps[0].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD1);
-	VoltagesTemps[0].warningTHRupper	= uint16_t(SETTING_WARN_THR_SW_AVDD1>>16);
-	VoltagesTemps[0].warningTHRdowner	= uint16_t(SETTING_WARN_THR_SW_AVDD1);
+	VoltagesTemps[SWAVDD1].ADCpin				= 4;
+	VoltagesTemps[SWAVDD1].divider				= 0;
+	VoltagesTemps[SWAVDD1].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_SW_AVDD1>>16);
+	VoltagesTemps[SWAVDD1].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD1);
+	VoltagesTemps[SWAVDD1].warningTHRupper		= uint16_t(SETTING_WARN_THR_SW_AVDD1>>16);
+	VoltagesTemps[SWAVDD1].warningTHRdowner		= uint16_t(SETTING_WARN_THR_SW_AVDD1);
 	
 	// ADC5 - PA05 - SW_AVDD2
-	VoltagesTemps[1].ADCpin				= 5;
-	VoltagesTemps[1].divider			= 0;
-	VoltagesTemps[1].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_SW_AVDD2>>16);
-	VoltagesTemps[1].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD2);
-	VoltagesTemps[1].warningTHRupper	= uint16_t(SETTING_WARN_THR_SW_AVDD2>>16);
-	VoltagesTemps[1].warningTHRdowner	= uint16_t(SETTING_WARN_THR_SW_AVDD2);
+	VoltagesTemps[SWAVDD2].ADCpin				= 5;
+	VoltagesTemps[SWAVDD2].divider				= 0;
+	VoltagesTemps[SWAVDD2].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_SW_AVDD2>>16);
+	VoltagesTemps[SWAVDD2].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD2);
+	VoltagesTemps[SWAVDD2].warningTHRupper		= uint16_t(SETTING_WARN_THR_SW_AVDD2>>16);
+	VoltagesTemps[SWAVDD2].warningTHRdowner		= uint16_t(SETTING_WARN_THR_SW_AVDD2);
 	
 	// ADC6 - PA06 - AVDD3
-	VoltagesTemps[2].ADCpin				= 6;
-	VoltagesTemps[2].divider			= 0;
-	VoltagesTemps[2].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_AVDD3>>16);
-	VoltagesTemps[2].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_AVDD3);
-	VoltagesTemps[2].warningTHRupper	= uint16_t(SETTING_WARN_THR_AVDD3>>16);
-	VoltagesTemps[2].warningTHRdowner	= uint16_t(SETTING_WARN_THR_AVDD3);
+	VoltagesTemps[SWAVDD3].ADCpin				= 6;
+	VoltagesTemps[SWAVDD3].divider				= 0;
+	VoltagesTemps[SWAVDD3].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_AVDD3>>16);
+	VoltagesTemps[SWAVDD3].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_AVDD3);
+	VoltagesTemps[SWAVDD3].warningTHRupper		= uint16_t(SETTING_WARN_THR_AVDD3>>16);
+	VoltagesTemps[SWAVDD3].warningTHRdowner		= uint16_t(SETTING_WARN_THR_AVDD3);
 	
 	// ADC7 - PA07 - MAN_1V2
-	VoltagesTemps[3].ADCpin				= 7;
-	VoltagesTemps[3].divider			= 0;
-	VoltagesTemps[3].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MAN_1V2>>16);
-	VoltagesTemps[3].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MAN_1V2);
-	VoltagesTemps[3].warningTHRupper	= uint16_t(SETTING_WARN_THR_MAN_1V2>>16);
-	VoltagesTemps[3].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MAN_1V2);
-	VoltagesTemps[3].enabled			= true;
+	VoltagesTemps[MAN1V2].ADCpin				= 7;
+	VoltagesTemps[MAN1V2].divider				= 0;
+	VoltagesTemps[MAN1V2].alarmTHRupper			= uint16_t(SETTING_ALARM_THR_MAN_1V2>>16);
+	VoltagesTemps[MAN1V2].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MAN_1V2);
+	VoltagesTemps[MAN1V2].warningTHRupper		= uint16_t(SETTING_WARN_THR_MAN_1V2>>16);
+	VoltagesTemps[MAN1V2].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MAN_1V2);
+	VoltagesTemps[MAN1V2].enabled				= true;
 	
 	// ADC16 - PA08 - DDR0_VREF
-	VoltagesTemps[4].ADCpin				= 16;
-	VoltagesTemps[4].divider			= 0;
-	VoltagesTemps[4].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_DDR0_VREF>>16);
-	VoltagesTemps[4].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR0_VREF);
-	VoltagesTemps[4].warningTHRupper	= uint16_t(SETTING_WARN_THR_DDR0_VREF>>16);
-	VoltagesTemps[4].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR0_VREF);
+	VoltagesTemps[DDR0VREF].ADCpin				= 16;
+	VoltagesTemps[DDR0VREF].divider				= 0;
+	VoltagesTemps[DDR0VREF].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_DDR0_VREF>>16);
+	VoltagesTemps[DDR0VREF].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR0_VREF);
+	VoltagesTemps[DDR0VREF].warningTHRupper		= uint16_t(SETTING_WARN_THR_DDR0_VREF>>16);
+	VoltagesTemps[DDR0VREF].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR0_VREF);
 	
 	// ADC17 - PA09 - DDR1_VREF
-	VoltagesTemps[5].ADCpin				= 17;
-	VoltagesTemps[5].divider			= 0;
-	VoltagesTemps[5].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_DDR1_VREF>>16);
-	VoltagesTemps[5].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR1_VREF);
-	VoltagesTemps[5].warningTHRupper	= uint16_t(SETTING_WARN_THR_DDR1_VREF>>16);
-	VoltagesTemps[5].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR1_VREF);
+	VoltagesTemps[DDR1VREF].ADCpin				= 17;
+	VoltagesTemps[DDR1VREF].divider				= 0;
+	VoltagesTemps[DDR1VREF].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_DDR1_VREF>>16);
+	VoltagesTemps[DDR1VREF].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR1_VREF);
+	VoltagesTemps[DDR1VREF].warningTHRupper		= uint16_t(SETTING_WARN_THR_DDR1_VREF>>16);
+	VoltagesTemps[DDR1VREF].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR1_VREF);
 	
 	// ADC18 - PA10 - VM_DRVDD
-	VoltagesTemps[6].ADCpin				= 18;
-	VoltagesTemps[6].divider			= 0;
-	VoltagesTemps[6].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_DRVDD>>16);
-	VoltagesTemps[6].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_DRVDD);
-	VoltagesTemps[6].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_DRVDD>>16);
-	VoltagesTemps[6].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VM_DRVDD);
-	VoltagesTemps[6].enabled			= true;
+	VoltagesTemps[VMDRVDD].ADCpin				= 18;
+	VoltagesTemps[VMDRVDD].divider				= 0;
+	VoltagesTemps[VMDRVDD].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_DRVDD>>16);
+	VoltagesTemps[VMDRVDD].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_DRVDD);
+	VoltagesTemps[VMDRVDD].warningTHRupper		= uint16_t(SETTING_WARN_THR_VM_DRVDD>>16);
+	VoltagesTemps[VMDRVDD].warningTHRdowner		= uint16_t(SETTING_WARN_THR_VM_DRVDD);
+	VoltagesTemps[VMDRVDD].enabled				= true;
 	
 	// ADC8 - PB00 - VIN_SCALED
-	VoltagesTemps[7].ADCpin				= 8;
-	VoltagesTemps[7].divider			= VIN_SCALED_DIVIDER;  // 12.5; // 12000/960
-	VoltagesTemps[7].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VIN_SCALED>>16);
-	VoltagesTemps[7].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VIN_SCALED);
-	VoltagesTemps[7].warningTHRupper	= uint16_t(SETTING_WARN_THR_VIN_SCALED>>16);
-	VoltagesTemps[7].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VIN_SCALED);
-	VoltagesTemps[7].enabled			= true;
+	VoltagesTemps[VINSCALED].ADCpin				= 8;
+	VoltagesTemps[VINSCALED].divider			= VIN_SCALED_DIVIDER;  // 12.5; // 12000/960
+	VoltagesTemps[VINSCALED].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VIN_SCALED>>16);
+	VoltagesTemps[VINSCALED].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VIN_SCALED);
+	VoltagesTemps[VINSCALED].warningTHRupper	= uint16_t(SETTING_WARN_THR_VIN_SCALED>>16);
+	VoltagesTemps[VINSCALED].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VIN_SCALED);
+	VoltagesTemps[VINSCALED].enabled			= true;
 	
 	// ADC9 - PB01 - VM_MAN3V3
-	VoltagesTemps[8].ADCpin				= 9;
-	VoltagesTemps[8].divider			= VM_MAN3V3_DIVIDER; // 3.74782; // 3300 / 880.51
-	VoltagesTemps[8].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3>>16);
-	VoltagesTemps[8].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3);
-	VoltagesTemps[8].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_MAN3V3>>16);
-	VoltagesTemps[8].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VM_MAN3V3);
+	VoltagesTemps[MAN3V3].ADCpin				= 9;
+	VoltagesTemps[MAN3V3].divider				= VM_MAN3V3_DIVIDER; // 3.74782; // 3300 / 880.51
+	VoltagesTemps[MAN3V3].alarmTHRupper			= uint16_t(SETTING_ALARM_THR_VM_MAN3V3>>16);
+	VoltagesTemps[MAN3V3].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3);
+	VoltagesTemps[MAN3V3].warningTHRupper		= uint16_t(SETTING_WARN_THR_VM_MAN3V3>>16);
+	VoltagesTemps[MAN3V3].warningTHRdowner		= uint16_t(SETTING_WARN_THR_VM_MAN3V3);
 	
 	// ADC10 - PB02 - VM_MAN1V8
-	VoltagesTemps[9].ADCpin				= 10;
-	VoltagesTemps[9].divider			= VM_MAN1V8_DIVIDER; // 2.73914; // 1800/657,14
-	VoltagesTemps[9].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8>>16);
-	VoltagesTemps[9].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8);
-	VoltagesTemps[9].warningTHRupper	= uint16_t(SETTING_WARN_THR_VM_MAN1V8>>16);
-	VoltagesTemps[9].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VM_MAN1V8);
+	VoltagesTemps[MAN1V8].ADCpin				= 10;
+	VoltagesTemps[MAN1V8].divider				= VM_MAN1V8_DIVIDER; // 2.73914; // 1800/657,14
+	VoltagesTemps[MAN1V8].alarmTHRupper			= uint16_t(SETTING_ALARM_THR_VM_MAN1V8>>16);
+	VoltagesTemps[MAN1V8].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8);
+	VoltagesTemps[MAN1V8].warningTHRupper		= uint16_t(SETTING_WARN_THR_VM_MAN1V8>>16);
+	VoltagesTemps[MAN1V8].warningTHRdowner		= uint16_t(SETTING_WARN_THR_VM_MAN1V8);
 	
 	// ADC11 - PB03 - MON_5V0
-	VoltagesTemps[10].ADCpin			= 11;
-	VoltagesTemps[10].divider			= MON_5V0_DIVIDER; // 2.739726; // 5000/1825
-	VoltagesTemps[10].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MON_5V0>>16);
-	VoltagesTemps[10].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MON_5V0);
-	VoltagesTemps[10].warningTHRupper	= uint16_t(SETTING_WARN_THR_MON_5V0>>16);
-	VoltagesTemps[10].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MON_5V0);
-	VoltagesTemps[10].enabled			= true;
+	VoltagesTemps[MON5V0].ADCpin				= 11;
+	VoltagesTemps[MON5V0].divider				= MON_5V0_DIVIDER; // 2.739726; // 5000/1825
+	VoltagesTemps[MON5V0].alarmTHRupper			= uint16_t(SETTING_ALARM_THR_MON_5V0>>16);
+	VoltagesTemps[MON5V0].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MON_5V0);
+	VoltagesTemps[MON5V0].warningTHRupper		= uint16_t(SETTING_WARN_THR_MON_5V0>>16);
+	VoltagesTemps[MON5V0].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MON_5V0);
+	VoltagesTemps[MON5V0].enabled				= true;
 	
 	// ADC14 - PB06 - MGT_AV
-	VoltagesTemps[11].ADCpin			= 14;
-	VoltagesTemps[11].divider			= 0;
-	VoltagesTemps[11].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MGT_AV>>16);
-	VoltagesTemps[11].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MGT_AV);
-	VoltagesTemps[11].warningTHRupper	= uint16_t(SETTING_WARN_THR_MGT_AV>>16);
-	VoltagesTemps[11].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MGT_AV);
+	VoltagesTemps[MGTAV].ADCpin					= 14;
+	VoltagesTemps[MGTAV].divider				= 0;
+	VoltagesTemps[MGTAV].alarmTHRupper			= uint16_t(SETTING_ALARM_THR_MGT_AV>>16);
+	VoltagesTemps[MGTAV].alarmTHRdowner			= uint16_t(SETTING_ALARM_THR_MGT_AV);
+	VoltagesTemps[MGTAV].warningTHRupper		= uint16_t(SETTING_WARN_THR_MGT_AV>>16);
+	VoltagesTemps[MGTAV].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MGT_AV);
 	
 	// ADC15 - PB07 - MGT_AVTT
-	VoltagesTemps[12].ADCpin			= 15;
-	VoltagesTemps[12].divider			= 0;
-	VoltagesTemps[12].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_MGT_AVTT>>16);
-	VoltagesTemps[12].alarmTHRdowner	= uint16_t(SETTING_ALARM_THR_MGT_AVTT);
-	VoltagesTemps[12].warningTHRupper	= uint16_t(SETTING_WARN_THR_MGT_AVTT>>16);
-	VoltagesTemps[12].warningTHRdowner	= uint16_t(SETTING_WARN_THR_MGT_AVTT);
+	VoltagesTemps[MGAVTT].ADCpin				= 15;
+	VoltagesTemps[MGAVTT].divider				= 0;
+	VoltagesTemps[MGAVTT].alarmTHRupper			= uint16_t(SETTING_ALARM_THR_MGT_AVTT>>16);
+	VoltagesTemps[MGAVTT].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MGT_AVTT);
+	VoltagesTemps[MGAVTT].warningTHRupper		= uint16_t(SETTING_WARN_THR_MGT_AVTT>>16);
+	VoltagesTemps[MGAVTT].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MGT_AVTT);
 	
 	// Temperatures	
 	// ADC24 - INT 0x18 - Internal Temperature (Need option to enable)
-	VoltagesTemps[13].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_INTERNAL_MCU_TEMP>>16);
-	VoltagesTemps[13].warningTHRupper	= uint16_t(SETTING_WARN_THR_INTERNAL_MCU_TEMP>>16);
-	VoltagesTemps[13].enabled			= true;
+	VoltagesTemps[INTTEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_INTERNAL_MCU_TEMP>>16);
+	VoltagesTemps[INTTEMP].warningTHRupper		= uint16_t(SETTING_WARN_THR_INTERNAL_MCU_TEMP>>16);
+	VoltagesTemps[INTTEMP].enabled				= true;
 	
-	VoltagesTemps[14].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_BOARD_TEMP>>16);
-	VoltagesTemps[14].warningTHRupper	= uint16_t(SETTING_WARN_THR_BOARD_TEMP>>16);
+	VoltagesTemps[BOARDTEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_BOARD_TEMP>>16);
+	VoltagesTemps[BOARDTEMP].warningTHRupper	= uint16_t(SETTING_WARN_THR_BOARD_TEMP>>16);
 	
-	VoltagesTemps[15].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA0_TEMP>>16);
-	VoltagesTemps[15].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA0_TEMP>>16);
+	VoltagesTemps[FPGA0TEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA0_TEMP>>16);
+	VoltagesTemps[FPGA0TEMP].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA0_TEMP>>16);
 	
-	VoltagesTemps[16].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA1_TEMP>>16);
-	VoltagesTemps[16].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA1_TEMP>>16);
+	VoltagesTemps[FPGA1TEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA1_TEMP>>16);
+	VoltagesTemps[FPGA1TEMP].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA1_TEMP>>16);
 	
-	DEBUG_PRINT2("Temps and Voltages Loaded:\n");
-	for (int i = 0; i < (ADCCOLUMNS + TEMPS_SENSOR); i++){
+	// FPGA FE_CURRENTS
+	// FPGA0 FE_CURRENT
+	VoltagesTemps[FPGA0FEVA].divider			= 0;
+	VoltagesTemps[FPGA0FEVA].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA0_FE_CURRENT>>16);
+	VoltagesTemps[FPGA0FEVA].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_FPGA0_FE_CURRENT);
+	VoltagesTemps[FPGA0FEVA].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA0_FE_CURRENT>>16);
+	VoltagesTemps[FPGA0FEVA].warningTHRdowner	= uint16_t(SETTING_WARN_THR_FPGA0_FE_CURRENT);
+	
+	// FPGA0 FE_CURRENT
+	VoltagesTemps[FPGA1FEVA].divider			= 0;
+	VoltagesTemps[FPGA1FEVA].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA1_FE_CURRENT>>16);
+	VoltagesTemps[FPGA1FEVA].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_FPGA1_FE_CURRENT);
+	VoltagesTemps[FPGA1FEVA].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA1_FE_CURRENT>>16);
+	VoltagesTemps[FPGA1FEVA].warningTHRdowner	= uint16_t(SETTING_WARN_THR_FPGA1_FE_CURRENT);
+	
+	DEBUG_PRINT2("Temps, Voltages and FE Currents Loaded:\n");
+	for (int i = 0; i < (ADCCOLUMNS + TEMPS_SENSOR + FPGA_FE_CURRENT); i++){
 		VoltagesTemps[i].ADCread = 0;
 		VoltagesTemps[i].alarmTriggered = false;
 		DEBUG_PRINT2("PIN %d - Divider %f\n", VoltagesTemps[i].ADCpin, VoltagesTemps[i].divider);
@@ -631,6 +658,7 @@ int SKAenableCheck(void){
 	if (enable != enableshadow){
 		if (!TPMpowerLock){
 			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
+			EnableShadowRegister = enable;
 			DEBUG_PRINT("Powered devices - %x\n", enable);
 			return 0;
 		}
@@ -653,6 +681,7 @@ static void IRQfromFPGA(void){
 
 void IRQinternalFPGAhandler(void){
 		uint32_t irq_status, irq_mask;
+		int enable_res;
 		
 		XO3_Read(itpm_cpld_intc_status, &irq_status);
 		XO3_Read(itpm_cpld_intc_mask, &irq_mask);
@@ -660,8 +689,21 @@ void IRQinternalFPGAhandler(void){
 		
 		// Call
 		
-		if (!(irq_mask & (irq_status & ENABLE_UPDATE_int))) SKAenableCheck(); // Verify if Enable can be 
+		if (!(irq_mask & (irq_status & ENABLE_UPDATE_int))) enable_res = SKAenableCheck(); // Verify if Enable can be 
 		
+		if (enable_res == 0){
+			/*	if (ADCpwr)			tmp += 0x1;
+				if (FRONTENDpwr)	tmp += 0x2;
+				if (FPGApwr)		tmp += 0x4;
+				if (SYSRpwr)		tmp += 0x8;
+				if (VGApwr)			tmp += 0x10;
+			if (EnableShadowRegister & 0x1) 
+			if (EnableShadowRegister & 0x2)
+			if (EnableShadowRegister & 0x4)
+			if (EnableShadowRegister & 0x8)
+			if (EnableShadowRegister & 0x10)*/
+			
+		}
 		
 		XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int); // Clean FPGA IRQ
 		
@@ -697,6 +739,10 @@ void StartupStuff(void){
 	SKAsystemMonitorStart();
 	
 	StartupLoadSettings();
+	
+	// Xilinx System Monitor load base address from CPLD
+	XO3_Read(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
+	XO3_Read(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
 	
 	// Interrupt Enable
 	//XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int));
@@ -735,7 +781,7 @@ void taskSlow(){
 		framWrite(FRAM_MCU_COUNTER, InternalCounter_CPLD_update);
 		framRead(FRAM_ADC_MGT_AVTT, &res2);
 	}
-	else DEBUG_PRINT1("ERROR no SPI bus comunication. Expected MCU version %x read %x\n", _build_version, res);
+	else DEBUG_PRINT1("ERROR no SPI bus comunication. Expected %x read %x\n", _build_version, res);
 	
 
 	//DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);

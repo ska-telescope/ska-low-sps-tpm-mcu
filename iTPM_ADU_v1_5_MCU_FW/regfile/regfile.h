@@ -12,6 +12,7 @@
 #include "itpm_cpld.h"
 #include "twi_fpga.h"
 #include "fram.h"
+#include "xil_sysmon_fpga.h"
 
 // Register Base Address
 #define cpld_offset	0x00000000
