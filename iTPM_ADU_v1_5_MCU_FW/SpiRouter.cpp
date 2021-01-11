@@ -131,7 +131,7 @@ SPI_sync(
 		}
 		
 		struct spi_xfer transfer;
-
+		
 		transfer.rxbuf = rxbuf;
 		transfer.txbuf = tmp;
 		transfer.size  = _count;
@@ -233,6 +233,41 @@ XO3_Read(
   *value=dato;
   return success;
 } // XO3_Read
+
+/*
+int
+XO3_Read(
+    void*     context,
+    uint32_t  offset,
+    uint32_t* value,
+    void*     privateData
+)*/
+int
+XO3_ReadXilinx(
+    uint32_t  regs,
+    uint32_t* value
+)
+{
+  uint8_t txBuffer[10];
+  uint8_t rxBuffer[12];
+  uint32_t dato=0;
+  memset(txBuffer, 0, 8);
+
+  txBuffer[0] = 0x03;
+  txBuffer[1] = 0xFF & (regs >> 24);
+  txBuffer[2] = 0xFF & (regs >> 16);
+  txBuffer[3] = 0xFF & (regs >> 8);
+  txBuffer[4] = 0xFF & (regs);
+
+  int success = SPI_sync(1, txBuffer, rxBuffer, 30); //11
+
+  dato = (((rxBuffer[7] & 0xFF) << 24) | ((rxBuffer[8] & 0xFF) << 16) | ((rxBuffer[9] & 0xFF) << 8) | rxBuffer[10]);
+  //memcpy(dato, rxBuffer[6], 4);
+  //dato=dato&0x0000ffff;
+  *value=dato;
+  return success;
+} // XO3_Read
+
 
 int
 XO3_BitfieldExtract(
