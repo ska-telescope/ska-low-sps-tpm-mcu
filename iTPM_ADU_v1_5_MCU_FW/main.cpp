@@ -350,46 +350,61 @@ void exchangeDataBlock(){
 	framRead(FRAM_WARN_ALARM_UPDATE, &res);
 	if (res == 0x1) SKAalarmUpdate();
 	
-	uint32_t xil;
-	uint32_t xil_done = 0xfffffff;
-	uint32_t xil_init = 0xfffffff;
-	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
-	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
-	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_init_M, itpm_cpld_regfile_xilinx_init_B,&xil_init);
-	
-	XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
-	//DEBUG_PRINT2("Xilinx Done - %x - Xilinx Init %x - Enable Xilinx - %x\n", xil_done, xil_init, res);
-	static uint32_t timer = 0;
-	static bool offset_read0 = false;
-	static bool offset_read1 = false;
-	uint32_t res2;
-	if (res & 0x4) { // EnableShadow Reg
-		if (((xil_done == 1) && (xil_init == 1)) || ((xil_done == 3) && (xil_init == 3))){
-			if (timer > 10){
-				// Xilinx System Monitor load base address from CPLD
-				XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
-				offset_read0 = true;
-				//delay_ms(1000);
-			}
-			else { timer++; DEBUG_PRINT2("Timer 0 Hit\n"); }
-			if(offset_read0){
-				XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
-				framWrite(FRAM_FPGA0_FE_CURRENT, res);
-				DEBUG_PRINT2("Xilinx SysMon FE Current 0 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga0_offset);
-			}
+	uint8_t timeout = 0;
+	bool xil_ack = false;
+	XO3_WriteByte(itpm_cpld_lock_mlock0, itpm_cpld_smap_global); // Request Xilinx Bus Ownership
+	do{
+		XO3_Read(itpm_cpld_lock_mlock0, &res);
+		if (res != itpm_cpld_smap_global){ // Check ownership
+			xil_ack = true;
+			DEBUG_PRINT2("CPLD LOCK MCU - Xilinx OK - Retry %i\n", timeout);
+			timeout = 10;
 		}
-		if (((xil_done == 2) && (xil_init == 2)) || ((xil_done == 3) && (xil_init == 3))){
-			if (timer > 10){
-				// Xilinx System Monitor load base address from CPLD
-				XO3_ReadXilinx(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
-				offset_read1 = true;
-				//delay_ms(1000);
+		else { timeout++; }
+		if ((timeout >= 10) && !xil_ack) DEBUG_PRINT2("CPLD LOCK MCU - Xilinx FAILED\n"); // Timout
+	} while (timeout > 10);
+	if (xil_ack){ // If bus is mine...	
+		uint32_t xil;
+		uint32_t xil_done = 0xfffffff;
+		uint32_t xil_init = 0xfffffff;
+		XO3_Read(itpm_cpld_regfile_xilinx, &xil);
+		XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
+		XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_init_M, itpm_cpld_regfile_xilinx_init_B,&xil_init);
+	
+		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
+		//DEBUG_PRINT2("Xilinx Done - %x - Xilinx Init %x - Enable Xilinx - %x\n", xil_done, xil_init, res);
+		static uint32_t timer = 0;
+		static bool offset_read0 = false;
+		static bool offset_read1 = false;
+		uint32_t res2;
+		if (res & 0x4) { // EnableShadow Reg
+			if (((xil_done == 1) && (xil_init == 1)) || ((xil_done == 3) && (xil_init == 3))){
+				if (timer > 10){
+					// Xilinx System Monitor load base address from CPLD
+					XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
+					offset_read0 = true;
+					//delay_ms(1000);
+				}
+				else { timer++; DEBUG_PRINT2("Timer 0 Hit\n"); }
+				if(offset_read0){
+					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
+					framWrite(FRAM_FPGA0_FE_CURRENT, res);
+					DEBUG_PRINT2("Xilinx SysMon FE Current 0 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga0_offset);
+				}
 			}
-			else { timer++;  DEBUG_PRINT2("Timer 1 Hit\n"); }
-		if (offset_read1){
-				XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF+itpm_cpld_wb_c2c1), &res);
-				framWrite(FRAM_FPGA1_FE_CURRENT, res);
-				DEBUG_PRINT2("Xilinx SysMon FE Current 1 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga1_offset);
+			if (((xil_done == 2) && (xil_init == 2)) || ((xil_done == 3) && (xil_init == 3))){
+				if (timer > 10){
+					// Xilinx System Monitor load base address from CPLD
+					XO3_ReadXilinx(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
+					offset_read1 = true;
+					//delay_ms(1000);
+				}
+				else { timer++;  DEBUG_PRINT2("Timer 1 Hit\n"); }
+			if (offset_read1){
+					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF+itpm_cpld_wb_c2c1), &res);
+					framWrite(FRAM_FPGA1_FE_CURRENT, res);
+					DEBUG_PRINT2("Xilinx SysMon FE Current 1 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga1_offset);
+				}
 			}
 		}
 	}
