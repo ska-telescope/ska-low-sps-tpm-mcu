@@ -326,7 +326,7 @@ int32_t SAMinternalTempConv(uint32_t raw) {
 }
 
 void exchangeDataBlockXilinx(){
-//	#define XILINX_DEBUG_TEXT
+	#define XILINX_DEBUG_TEXT
 	uint8_t timeout = 0;
 	bool xil_ack = false;
 	static bool offset_read0 = false;
@@ -375,7 +375,7 @@ void exchangeDataBlockXilinx(){
 					offset_read0 = true;
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c0, &res2);
-					if (res2 < 0x1021752) { offset_read0 = false; DEBUG_PRINT("Xil0 FW Ver. too old. System Monitor 0 disabled\n"); xil0_sm_disabled = true; }
+					if (res2 < 0x1021752) { offset_read0 = false; DEBUG_PRINT1("Xil0 FW Ver. too old. System Monitor 0 disabled\n"); xil0_sm_disabled = true; }
 					//delay_ms(1000);
 				}
 				else {
@@ -399,7 +399,7 @@ void exchangeDataBlockXilinx(){
 					offset_read1 = true;
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c1, &res2);
-					if (res2 < 0x1021752) { offset_read1 = false; DEBUG_PRINT("Xil1 FW Ver. too old. System Monitor 1 disabled\n"); xil1_sm_disabled = true; } 
+					if (res2 < 0x1021752) { offset_read1 = false; DEBUG_PRINT1("Xil1 FW Ver. too old. System Monitor 1 disabled\n"); xil1_sm_disabled = true; } 
 					//delay_ms(1000);
 				}
 				else {
@@ -859,11 +859,16 @@ static void IRQtimerSlow(const struct timer_task *const timer_task){
 }
 
 void taskSlow(){
+	static uint8_t errorSPI = 0;
 	uint32_t res, res2;
 	gpio_toggle_pin_level(USR_LED0);
 	
 	framRead(FRAM_MCU_VERSION, &res);
 	if (res == _build_version){
+		if (errorSPI > 0){
+			DEBUG_PRINT1("INFO: SPI Bus revived. Comunication OK\n");
+			errorSPI = 0;
+		}
 		TWIdataBlock();
 		exchangeDataBlock();
 		
@@ -871,37 +876,43 @@ void taskSlow(){
 		InternalCounter_CPLD_update++;
 		framWrite(FRAM_MCU_COUNTER, InternalCounter_CPLD_update);
 		framRead(FRAM_ADC_MGT_AVTT, &res2);
-	}
-	else DEBUG_PRINT1("ERROR no SPI bus comunication. Expected %x read %x\n", _build_version, res);
-	
 
-	//DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);
-	if(pollingNew > 2000){
-		pollingNew = 2000;
-		framWrite(FRAM_MCU_POOLING_INTERVAL, 2000);
-	}
-	if (pollingOld != pollingNew){
-		timer_stop(&TIMER_0);
-		TIMER_0_task1.interval = pollingNew;
-		timer_start(&TIMER_0);
-		pollingOld = pollingNew;
-		DEBUG_PRINT("Pooling Time Changed to %d\n", pollingNew);
-	}
-	
-	framRead(FRAM_MCU_BOOTLOADER_COMMANDS, &res2);
-	if (res2 < 0xffffffff){
-		if (res2 == BL_REQUEST_BOOT){
-			RAM_BOOT_TYPE = BL_REQUEST_BOOT;
-			RAM_BOOT_TYPE_SHIFT = (BL_REQUEST_BOOT >> 1);
-			
-			framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0x1);
-			DEBUG_PRINT("Requested Jump to Bootloader, Goodbye!");
-			
-			delay_ms(5);
-			NVIC_SystemReset();
+		//DEBUG_PRINT3("FRAM_MCU_POOLING_INTERVAL > %x\n", pollingNew);
+		if(pollingNew > 2000){
+			pollingNew = 2000;
+			framWrite(FRAM_MCU_POOLING_INTERVAL, 2000);
 		}
-		else{
-			framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0xFFFFFFFF);
+		if (pollingOld != pollingNew){
+			timer_stop(&TIMER_0);
+			TIMER_0_task1.interval = pollingNew;
+			timer_start(&TIMER_0);
+			pollingOld = pollingNew;
+			DEBUG_PRINT("Pooling Time Changed to %d\n", pollingNew);
+		}
+	
+		framRead(FRAM_MCU_BOOTLOADER_COMMANDS, &res2);
+		if (res2 < 0xffffffff){
+			if (res2 == BL_REQUEST_BOOT){
+				RAM_BOOT_TYPE = BL_REQUEST_BOOT;
+				RAM_BOOT_TYPE_SHIFT = (BL_REQUEST_BOOT >> 1);
+			
+				framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0x1);
+				DEBUG_PRINT("Requested Jump to Bootloader, Goodbye!");
+			
+				delay_ms(5);
+				NVIC_SystemReset();
+			}
+			else{
+				framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0xFFFFFFFF);
+			}
+		}
+	}
+	else{
+		DEBUG_PRINT1("CRITICAL ERROR: no SPI bus comunication. Expected %x read %x\n", _build_version, res);
+		errorSPI++;
+		if (errorSPI > 10){
+			DEBUG_PRINT("\n\n!!! CRITICAL ERROR: REBOOT DUE SPI BUS CRITICAL STATE !!!/n");
+			NVIC_SystemReset();
 		}
 	}
 	
