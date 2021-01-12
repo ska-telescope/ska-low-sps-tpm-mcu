@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000104;
+const uint32_t _build_version = 0xb0000105;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -326,7 +326,7 @@ int32_t SAMinternalTempConv(uint32_t raw) {
 }
 
 void exchangeDataBlockXilinx(){
-	#define XILINX_DEBUG_TEXT
+	//#define XILINX_DEBUG_TEXT
 	uint8_t timeout = 0;
 	bool xil_ack = false;
 	static bool offset_read0 = false;
@@ -347,7 +347,7 @@ void exchangeDataBlockXilinx(){
 		}
 		else { timeout++; }
 		if ((timeout >= 10) && !xil_ack){
-			DEBUG_PRINT2("CPLD LOCK MCU - Xilinx Busy\n");  // Timout
+			DEBUG_PRINT2("CPLD LOCK MCU - Xilinx Busy\n");  // Timeout
 			offset_read0 = false;
 			offset_read1 = false;
 			timer = 0;
@@ -774,7 +774,6 @@ static void IRQfromFPGA(void){
 
 void IRQinternalFPGAhandler(void){
 		uint32_t irq_status, irq_mask;
-		int enable_res;
 		
 		XO3_Read(itpm_cpld_intc_status, &irq_status);
 		XO3_Read(itpm_cpld_intc_mask, &irq_mask);
@@ -782,21 +781,12 @@ void IRQinternalFPGAhandler(void){
 		
 		// Call
 		
-		if (!(irq_mask & (irq_status & ENABLE_UPDATE_int))) enable_res = SKAenableCheck(); // Verify if Enable can be 
+		if (!(irq_mask & (irq_status & ENABLE_UPDATE_int))) { SKAenableCheck(); } // Enable Interrupt
 		
-		if (enable_res == 0){
-			/*	if (ADCpwr)			tmp += 0x1;
-				if (FRONTENDpwr)	tmp += 0x2;
-				if (FPGApwr)		tmp += 0x4;
-				if (SYSRpwr)		tmp += 0x8;
-				if (VGApwr)			tmp += 0x10;
-			if (EnableShadowRegister & 0x1) 
-			if (EnableShadowRegister & 0x2)
-			if (EnableShadowRegister & 0x4)
-			if (EnableShadowRegister & 0x8)
-			if (EnableShadowRegister & 0x10)*/
-			
-		}
+		if (!(irq_mask & (irq_status & FRAM_UPDATE_int))) { SKAalarmUpdate(); DEBUG_PRINT("FRAM Data Updated IRQ\n"); }
+		
+
+
 		
 		XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int); // Clean FPGA IRQ
 		

@@ -35,7 +35,7 @@ enum IRQfpgaMask{
 		I2C_int = 0x1,
 		UART_RX_int = 0x2,
 		WDT_SEM_EXPIRED_int = 0x4,
-		ALARM_UPDATE_int = 0x8,
+		FRAM_UPDATE_int = 0x8,
 		ENABLE_UPDATE_int = 0x10,
 		TMP_EVENT_INT = 0x20,
 		XIL0_int = 0x40,
