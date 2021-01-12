@@ -388,6 +388,10 @@ void exchangeDataBlockXilinx(){
 			timer = 0;
 			xil0_sm_disabled = false;
 			xil1_sm_disabled = false;
+			VoltagesTemps[FPGA0TEMP].enabled = false;
+			VoltagesTemps[FPGA0FEVA].enabled = false;
+			VoltagesTemps[FPGA1TEMP].enabled = false;
+			VoltagesTemps[FPGA1FEVA].enabled = false;
 		}
 	} while (timeout < 10);
 	if (xil0_sm_disabled && xil1_sm_disabled) xil_ack = false;
@@ -407,10 +411,14 @@ void exchangeDataBlockXilinx(){
 				if (timer > 4){
 					// Xilinx System Monitor load base address from CPLD
 					XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
-					offset_read0 = true;
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c0, &res2);
 					if (res2 < 0x1021752) { offset_read0 = false; DEBUG_PRINT1("Xil0 FW Ver. too old. System Monitor 0 disabled\n"); xil0_sm_disabled = true; }
+					else {
+						offset_read0 = true;
+						VoltagesTemps[FPGA0TEMP].enabled = true;
+						VoltagesTemps[FPGA0FEVA].enabled = true;
+					}
 					//delay_ms(1000);
 				}
 				else {
@@ -435,10 +443,14 @@ void exchangeDataBlockXilinx(){
 				if (timer > 5){
 					// Xilinx System Monitor load base address from CPLD
 					XO3_ReadXilinx(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
-					offset_read1 = true;
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c1, &res2);
 					if (res2 < 0x1021752) { offset_read1 = false; DEBUG_PRINT1("Xil1 FW Ver. too old. System Monitor 1 disabled\n"); xil1_sm_disabled = true; } 
+					else {
+						offset_read1 = true;
+						VoltagesTemps[FPGA1TEMP].enabled = true;
+						VoltagesTemps[FPGA1FEVA].enabled = true;
+					}
 					//delay_ms(1000);
 				}
 				else {
