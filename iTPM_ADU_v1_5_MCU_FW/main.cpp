@@ -75,6 +75,7 @@ struct ADCstruct {
 	uint16_t warningTHRdowner;
 	bool alarmTriggered;
 	bool enabled;
+	uint8_t objectType;
 	};
 	
 struct ADCstruct VoltagesTemps[ADCCOLUMNS+TEMPS_SENSOR+FPGA_FE_CURRENT]; // +3 Temperatures + 2 FE_CURRENT
@@ -107,6 +108,7 @@ uint32_t InternalCounter_CPLD_update = 0;
 uint32_t InternalCounter_ADC_update = 0;
 
 uint32_t xil_sysmon_fpga0_offset, xil_sysmon_fpga1_offset;
+bool XilinxBlockNewInfo = false;
 
 /* -----------------------------------*/
 
@@ -280,62 +282,66 @@ void SKAalarmUpdate(void){
 
 void SKAalarmManage(){
 	/// -------------- ADC -----------------
-	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
+	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
+		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+		//SKAPower(0,0,0,0,0);
+		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+		DEBUG_PRINT1("ADC ALARM %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
+		//delay_ms(500); // ONLY FOR TEST
+	}
+	else if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
+		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+		//SKAPower(0,0,0,0,0);
+		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+		DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
+		//delay_ms(500); // ONLY FOR TEST
+	}
+	else if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
 		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
 		DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRupper);
 		//delay_ms(500); // ONLY FOR TEST
 	}	
-	if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
+	else if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
 		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
 		DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRdowner);
 		//delay_ms(500); // ONLY FOR TEST
 	}
-	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
-		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		//SKAPower(0,0,0,0,0);
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_temperature_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("ADC ALARM %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
-		//delay_ms(500); // ONLY FOR TEST
-	}
-	if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
-		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		//SKAPower(0,0,0,0,0);
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_temperature_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
-		//delay_ms(500); // ONLY FOR TEST
-	}
+
 	/// -------------- ADC -----------------
 	
 	/// -------------- Other Voltage/Current/Temps -----------------------
-	for (int i = BOARDTEMP; i < FPGA1FEVA+1; i++){
-		if ((VoltagesTemps[i].ADCread > VoltagesTemps[i].warningTHRupper) && ((VoltagesTemps[i]).enabled)){
-			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
-			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-			DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRupper);
-			//delay_ms(500); // ONLY FOR TEST
+	if (XilinxBlockNewInfo){
+		for (int i = BOARDTEMP; i < FPGA1FEVA+1; i++){
+			if ((VoltagesTemps[i].ADCread > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
+				//SKAPower(0,0,0,0,0);
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC ALARM %d too high, val %x expected max %x\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
+				//delay_ms(500); // ONLY FOR TEST
+			}
+			else if ((VoltagesTemps[i].ADCread < VoltagesTemps[i].alarmTHRdowner) && ((VoltagesTemps[i]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
+				//SKAPower(0,0,0,0,0);
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRdowner);
+				//delay_ms(500); // ONLY FOR TEST
+			}
+			else if ((VoltagesTemps[i].ADCread > VoltagesTemps[i].warningTHRupper) && ((VoltagesTemps[i]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRupper);
+				//delay_ms(500); // ONLY FOR TEST
+			}
+			else if ((VoltagesTemps[i].ADCread < VoltagesTemps[i].warningTHRdowner) && ((VoltagesTemps[i]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRdowner);
+				//delay_ms(500); // ONLY FOR TEST
+			}
 		}
-		if ((VoltagesTemps[i].ADCread < VoltagesTemps[i].warningTHRdowner) && ((VoltagesTemps[i]).enabled)){
-			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
-			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-			DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRdowner);
-			//delay_ms(500); // ONLY FOR TEST
-		}
-		if ((VoltagesTemps[i].ADCread > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled)){
-			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
-			//SKAPower(0,0,0,0,0);
-			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_temperature_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-			DEBUG_PRINT1("ADC ALARM %d too high, val %d expected max %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
-			//delay_ms(500); // ONLY FOR TEST
-		}
-		if ((VoltagesTemps[i].ADCread < VoltagesTemps[i].alarmTHRdowner) && ((VoltagesTemps[i]).enabled)){
-			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
-			//SKAPower(0,0,0,0,0);
-			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_temperature_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-			DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRdowner);
-			//delay_ms(500); // ONLY FOR TEST
-		}
+		XilinxBlockNewInfo = false;
 	}
 	
 	/// -------------- Other Voltage/Current/Temps ---------------------------	
@@ -428,6 +434,7 @@ void exchangeDataBlockXilinx(){
 #endif
 					}
 				if(offset_read0){
+					XilinxBlockNewInfo = true;
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
 					framWrite(FRAM_FPGA0_FE_CURRENT, res);
 					VoltagesTemps[FPGA0FEVA].ADCread = uint16_t(res);
@@ -460,6 +467,7 @@ void exchangeDataBlockXilinx(){
 #endif
 					}
 				if (offset_read1){
+					XilinxBlockNewInfo = true;
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF+itpm_cpld_wb_c2c1), &res);
 					framWrite(FRAM_FPGA1_FE_CURRENT, res);
 					VoltagesTemps[FPGA1FEVA].ADCread = uint16_t(res);
@@ -653,6 +661,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[SWAVDD1].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD1);
 	VoltagesTemps[SWAVDD1].warningTHRupper		= uint16_t(SETTING_WARN_THR_SW_AVDD1>>16);
 	VoltagesTemps[SWAVDD1].warningTHRdowner		= uint16_t(SETTING_WARN_THR_SW_AVDD1);
+	VoltagesTemps[SWAVDD1].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC5 - PA05 - SW_AVDD2
 	VoltagesTemps[SWAVDD2].ADCpin				= 5;
@@ -661,6 +670,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[SWAVDD2].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_SW_AVDD2);
 	VoltagesTemps[SWAVDD2].warningTHRupper		= uint16_t(SETTING_WARN_THR_SW_AVDD2>>16);
 	VoltagesTemps[SWAVDD2].warningTHRdowner		= uint16_t(SETTING_WARN_THR_SW_AVDD2);
+	VoltagesTemps[SWAVDD2].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC6 - PA06 - AVDD3
 	VoltagesTemps[SWAVDD3].ADCpin				= 6;
@@ -669,6 +679,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[SWAVDD3].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_AVDD3);
 	VoltagesTemps[SWAVDD3].warningTHRupper		= uint16_t(SETTING_WARN_THR_AVDD3>>16);
 	VoltagesTemps[SWAVDD3].warningTHRdowner		= uint16_t(SETTING_WARN_THR_AVDD3);
+	VoltagesTemps[SWAVDD3].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC7 - PA07 - MAN_1V2
 	VoltagesTemps[MAN1V2].ADCpin				= 7;
@@ -677,6 +688,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[MAN1V2].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MAN_1V2);
 	VoltagesTemps[MAN1V2].warningTHRupper		= uint16_t(SETTING_WARN_THR_MAN_1V2>>16);
 	VoltagesTemps[MAN1V2].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MAN_1V2);
+	VoltagesTemps[MAN1V2].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	VoltagesTemps[MAN1V2].enabled				= true;
 	
 	// ADC16 - PA08 - DDR0_VREF
@@ -686,6 +698,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[DDR0VREF].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR0_VREF);
 	VoltagesTemps[DDR0VREF].warningTHRupper		= uint16_t(SETTING_WARN_THR_DDR0_VREF>>16);
 	VoltagesTemps[DDR0VREF].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR0_VREF);
+	VoltagesTemps[DDR0VREF].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC17 - PA09 - DDR1_VREF
 	VoltagesTemps[DDR1VREF].ADCpin				= 17;
@@ -694,6 +707,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[DDR1VREF].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_DDR1_VREF);
 	VoltagesTemps[DDR1VREF].warningTHRupper		= uint16_t(SETTING_WARN_THR_DDR1_VREF>>16);
 	VoltagesTemps[DDR1VREF].warningTHRdowner	= uint16_t(SETTING_WARN_THR_DDR1_VREF);
+	VoltagesTemps[DDR1VREF].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC18 - PA10 - VM_DRVDD
 	VoltagesTemps[VMDRVDD].ADCpin				= 18;
@@ -702,6 +716,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[VMDRVDD].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_DRVDD);
 	VoltagesTemps[VMDRVDD].warningTHRupper		= uint16_t(SETTING_WARN_THR_VM_DRVDD>>16);
 	VoltagesTemps[VMDRVDD].warningTHRdowner		= uint16_t(SETTING_WARN_THR_VM_DRVDD);
+	VoltagesTemps[VMDRVDD].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	VoltagesTemps[VMDRVDD].enabled				= true;
 	
 	// ADC8 - PB00 - VIN_SCALED
@@ -711,6 +726,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[VINSCALED].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VIN_SCALED);
 	VoltagesTemps[VINSCALED].warningTHRupper	= uint16_t(SETTING_WARN_THR_VIN_SCALED>>16);
 	VoltagesTemps[VINSCALED].warningTHRdowner	= uint16_t(SETTING_WARN_THR_VIN_SCALED);
+	VoltagesTemps[VINSCALED].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	VoltagesTemps[VINSCALED].enabled			= true;
 	
 	// ADC9 - PB01 - VM_MAN3V3
@@ -720,6 +736,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[MAN3V3].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN3V3);
 	VoltagesTemps[MAN3V3].warningTHRupper		= uint16_t(SETTING_WARN_THR_VM_MAN3V3>>16);
 	VoltagesTemps[MAN3V3].warningTHRdowner		= uint16_t(SETTING_WARN_THR_VM_MAN3V3);
+	VoltagesTemps[MAN3V3].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC10 - PB02 - VM_MAN1V8
 	VoltagesTemps[MAN1V8].ADCpin				= 10;
@@ -728,6 +745,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[MAN1V8].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_VM_MAN1V8);
 	VoltagesTemps[MAN1V8].warningTHRupper		= uint16_t(SETTING_WARN_THR_VM_MAN1V8>>16);
 	VoltagesTemps[MAN1V8].warningTHRdowner		= uint16_t(SETTING_WARN_THR_VM_MAN1V8);
+	VoltagesTemps[MAN1V8].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC11 - PB03 - MON_5V0
 	VoltagesTemps[MON5V0].ADCpin				= 11;
@@ -736,6 +754,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[MON5V0].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MON_5V0);
 	VoltagesTemps[MON5V0].warningTHRupper		= uint16_t(SETTING_WARN_THR_MON_5V0>>16);
 	VoltagesTemps[MON5V0].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MON_5V0);
+	VoltagesTemps[MON5V0].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	VoltagesTemps[MON5V0].enabled				= true;
 	
 	// ADC14 - PB06 - MGT_AV
@@ -745,6 +764,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[MGTAV].alarmTHRdowner			= uint16_t(SETTING_ALARM_THR_MGT_AV);
 	VoltagesTemps[MGTAV].warningTHRupper		= uint16_t(SETTING_WARN_THR_MGT_AV>>16);
 	VoltagesTemps[MGTAV].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MGT_AV);
+	VoltagesTemps[MGTAV].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC15 - PB07 - MGT_AVTT
 	VoltagesTemps[MGAVTT].ADCpin				= 15;
@@ -753,21 +773,27 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[MGAVTT].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_MGT_AVTT);
 	VoltagesTemps[MGAVTT].warningTHRupper		= uint16_t(SETTING_WARN_THR_MGT_AVTT>>16);
 	VoltagesTemps[MGAVTT].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MGT_AVTT);
+	VoltagesTemps[MGAVTT].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// Temperatures	
 	// ADC24 - INT 0x18 - Internal Temperature (Need option to enable)
 	VoltagesTemps[INTTEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_INTERNAL_MCU_TEMP>>16);
 	VoltagesTemps[INTTEMP].warningTHRupper		= uint16_t(SETTING_WARN_THR_INTERNAL_MCU_TEMP>>16);
+	VoltagesTemps[INTTEMP].objectType			= itpm_cpld_regfile_global_status_temperature_B;
 	VoltagesTemps[INTTEMP].enabled				= true;
 	
 	VoltagesTemps[BOARDTEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_BOARD_TEMP>>16);
 	VoltagesTemps[BOARDTEMP].warningTHRupper	= uint16_t(SETTING_WARN_THR_BOARD_TEMP>>16);
+	VoltagesTemps[BOARDTEMP].objectType			= itpm_cpld_regfile_global_status_temperature_B;
 	
+	// FPGA TEMPS
 	VoltagesTemps[FPGA0TEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA0_TEMP>>16);
 	VoltagesTemps[FPGA0TEMP].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA0_TEMP>>16);
+	VoltagesTemps[FPGA0TEMP].objectType			= itpm_cpld_regfile_global_status_temperature_B;
 	
 	VoltagesTemps[FPGA1TEMP].alarmTHRupper		= uint16_t(SETTING_ALARM_THR_FPGA1_TEMP>>16);
 	VoltagesTemps[FPGA1TEMP].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA1_TEMP>>16);
+	VoltagesTemps[FPGA1TEMP].objectType			= itpm_cpld_regfile_global_status_temperature_B;
 	
 	// FPGA FE_CURRENTS
 	// FPGA0 FE_CURRENT
@@ -776,6 +802,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[FPGA0FEVA].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_FPGA0_FE_CURRENT);
 	VoltagesTemps[FPGA0FEVA].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA0_FE_CURRENT>>16);
 	VoltagesTemps[FPGA0FEVA].warningTHRdowner	= uint16_t(SETTING_WARN_THR_FPGA0_FE_CURRENT);
+	VoltagesTemps[FPGA0FEVA].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// FPGA0 FE_CURRENT
 	VoltagesTemps[FPGA1FEVA].divider			= 0;
@@ -783,6 +810,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[FPGA1FEVA].alarmTHRdowner		= uint16_t(SETTING_ALARM_THR_FPGA1_FE_CURRENT);
 	VoltagesTemps[FPGA1FEVA].warningTHRupper	= uint16_t(SETTING_WARN_THR_FPGA1_FE_CURRENT>>16);
 	VoltagesTemps[FPGA1FEVA].warningTHRdowner	= uint16_t(SETTING_WARN_THR_FPGA1_FE_CURRENT);
+	VoltagesTemps[FPGA1FEVA].objectType			= itpm_cpld_regfile_global_status_voltage_B;
 	
 	DEBUG_PRINT2("Temps, Voltages and FE Currents Loaded:\n");
 	for (int i = 0; i < (ADCCOLUMNS + TEMPS_SENSOR + FPGA_FE_CURRENT); i++){
@@ -957,7 +985,7 @@ void taskSlow(){
 		DEBUG_PRINT1("CRITICAL ERROR: no SPI bus comunication. Expected %x read %x\n", _build_version, res);
 		errorSPI++;
 		if (errorSPI > 10){
-			DEBUG_PRINT("\n\n!!! CRITICAL ERROR: REBOOT DUE SPI BUS CRITICAL STATE !!!/n");
+			DEBUG_PRINT("\n\n!!! CRITICAL ERROR: REBOOT DUE SPI BUS CRITICAL STATE !!!\n");
 			NVIC_SystemReset();
 		}
 	}
