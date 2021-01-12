@@ -279,6 +279,7 @@ void SKAalarmUpdate(void){
 }
 
 void SKAalarmManage(){
+	/// -------------- ADC -----------------
 	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
 		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
@@ -305,6 +306,40 @@ void SKAalarmManage(){
 		DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
 		//delay_ms(500); // ONLY FOR TEST
 	}
+	/// -------------- ADC -----------------
+	
+	/// -------------- Other Voltage/Current/Temps -----------------------
+	for (int i = BOARDTEMP; i < FPGA1FEVA+1; i++){
+			if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRupper);
+				//delay_ms(500); // ONLY FOR TEST
+			}
+			if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRdowner);
+				//delay_ms(500); // ONLY FOR TEST
+			}
+			if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+				//SKAPower(0,0,0,0,0);
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_temperature_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC ALARM %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
+				//delay_ms(500); // ONLY FOR TEST
+			}
+			if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
+				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+				//SKAPower(0,0,0,0,0);
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_temperature_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
+				//delay_ms(500); // ONLY FOR TEST
+			}
+	}
+	
+	/// -------------- Other Voltage/Current/Temps ---------------------------	
+	
 }
 
 int32_t SAMinternalTempConv(uint32_t raw) {
@@ -387,6 +422,10 @@ void exchangeDataBlockXilinx(){
 				if(offset_read0){
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
 					framWrite(FRAM_FPGA0_FE_CURRENT, res);
+					VoltagesTemps[FPGA0FEVA].ADCread = (uint16_t)res;
+					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_TEMP), &res);
+					framWrite(FRAM_FPGA0_TEMP, res);
+					VoltagesTemps[FPGA0TEMP].ADCread = (uint16_t)res;
 #ifdef XILINX_DEBUG_TEXT
 					DEBUG_PRINT2("Xilinx SysMon FE Current 0 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga0_offset);
 #endif
@@ -411,6 +450,10 @@ void exchangeDataBlockXilinx(){
 				if (offset_read1){
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF+itpm_cpld_wb_c2c1), &res);
 					framWrite(FRAM_FPGA1_FE_CURRENT, res);
+					VoltagesTemps[FPGA1FEVA].ADCread = (uint16_t)res;
+					XO3_ReadXilinx((xil_sysmon_fpga1_offset+XIL_SYSMON_FPGA1_TEMP), &res);
+					framWrite(FRAM_FPGA1_TEMP, res);
+					VoltagesTemps[FPGA1TEMP].ADCread = (uint16_t)res;
 #ifdef XILINX_DEBUG_TEXT					
 					DEBUG_PRINT2("Xilinx SysMon FE Current 1 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga1_offset);
 #endif
@@ -525,6 +568,7 @@ void TWIdataBlock(void){
 	// i2c1
    //readBoardTemp(&ADT7408_temp, &ADT7408Regs[3]); // Disabled for errors
 	status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
+	VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp_raw;
 	//XO3_WriteByte(fram_ADT7408_M_1_temp_val + fram_offset, retvalue);
 	retvalue = 0xffffffff;
 
