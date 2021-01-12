@@ -422,10 +422,10 @@ void exchangeDataBlockXilinx(){
 				if(offset_read0){
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
 					framWrite(FRAM_FPGA0_FE_CURRENT, res);
-					VoltagesTemps[FPGA0FEVA].ADCread = (uint16_t)res;
+					VoltagesTemps[FPGA0FEVA].ADCread = uint16_t(res);
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_TEMP), &res);
 					framWrite(FRAM_FPGA0_TEMP, res);
-					VoltagesTemps[FPGA0TEMP].ADCread = (uint16_t)res;
+					VoltagesTemps[FPGA0TEMP].ADCread = uint16_t(res);
 #ifdef XILINX_DEBUG_TEXT
 					DEBUG_PRINT2("Xilinx SysMon FE Current 0 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga0_offset);
 #endif
@@ -450,10 +450,10 @@ void exchangeDataBlockXilinx(){
 				if (offset_read1){
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF+itpm_cpld_wb_c2c1), &res);
 					framWrite(FRAM_FPGA1_FE_CURRENT, res);
-					VoltagesTemps[FPGA1FEVA].ADCread = (uint16_t)res;
+					VoltagesTemps[FPGA1FEVA].ADCread = uint16_t(res);
 					XO3_ReadXilinx((xil_sysmon_fpga1_offset+XIL_SYSMON_FPGA1_TEMP), &res);
 					framWrite(FRAM_FPGA1_TEMP, res);
-					VoltagesTemps[FPGA1TEMP].ADCread = (uint16_t)res;
+					VoltagesTemps[FPGA1TEMP].ADCread = uint16_t(res);
 #ifdef XILINX_DEBUG_TEXT					
 					DEBUG_PRINT2("Xilinx SysMon FE Current 1 - %x - SysMon OFFSET %x\n", res, xil_sysmon_fpga1_offset);
 #endif

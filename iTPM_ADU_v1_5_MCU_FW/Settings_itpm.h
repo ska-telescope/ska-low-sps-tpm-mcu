@@ -44,11 +44,12 @@ enum IRQfpgaMask{
 		MASK_default_int = 0xfff
 	};
 	
-// VOLTAGE DIVIDERS
+// VOLTAGE DIVIDERS - MULTIPLIERS
 const float VIN_SCALED_DIVIDER						= 12.5; // 12000/960
 const float VM_MAN3V3_DIVIDER						= 3.74782; // 3300 / 880.51
 const float VM_MAN1V8_DIVIDER						= 2.73914; // 1800/657,14
 const float MON_5V0_DIVIDER							= 2.739726; // 5000/1825
+const float FPGA_FE_CURRENT_MULTPLIER				= (1/65536/0.4);
 
 // THREASHOLDS = 32 bit - [31:15]Upper Threshold - [14:0] Lower Threshold
 
