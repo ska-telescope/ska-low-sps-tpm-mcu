@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000105;
+const uint32_t _build_version = 0xb0000106;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -388,7 +388,7 @@ void exchangeDataBlockXilinx(){
 		}
 		else { timeout++; }
 		if ((timeout >= 10) && !xil_ack){
-			DEBUG_PRINT2("CPLD LOCK MCU - Xilinx Busy\n");  // Timeout
+			DEBUG_PRINT2("CPLD LOCK MCU - Xilinx Busy (Maybe someone is programming the FPGAs?)\n");  // Timeout
 			offset_read0 = false;
 			offset_read1 = false;
 			timer = 0;
@@ -419,7 +419,7 @@ void exchangeDataBlockXilinx(){
 					XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c0, &res2);
-					if (res2 < 0x1021752) { offset_read0 = false; DEBUG_PRINT1("Xil0 FW Ver. too old. System Monitor 0 disabled\n"); xil0_sm_disabled = true; }
+					if (res2 < 0x1021752) { offset_read0 = false; DEBUG_PRINT1("Xil0 FW Ver 0x%x too old. System Monitor 0 disabled\n", res2); xil0_sm_disabled = true; }
 					else {
 						offset_read0 = true;
 						VoltagesTemps[FPGA0TEMP].enabled = true;
@@ -452,7 +452,7 @@ void exchangeDataBlockXilinx(){
 					XO3_ReadXilinx(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c1, &res2);
-					if (res2 < 0x1021752) { offset_read1 = false; DEBUG_PRINT1("Xil1 FW Ver. too old. System Monitor 1 disabled\n"); xil1_sm_disabled = true; } 
+					if (res2 < 0x1021752) { offset_read1 = false; DEBUG_PRINT1("Xil1 FW Ver 0x%x too old. System Monitor 1 disabled\n", res2); xil1_sm_disabled = true; } 
 					else {
 						offset_read1 = true;
 						VoltagesTemps[FPGA1TEMP].enabled = true;
@@ -850,6 +850,40 @@ int SKAenableCheck(void){
 			return -1;
 		}
 	}
+	
+	if (enable & 0x1){ // Enable ADC
+		VoltagesTemps[SWAVDD1].enabled = true;
+		VoltagesTemps[SWAVDD2].enabled = true;
+		VoltagesTemps[SWAVDD3].enabled = true;
+		VoltagesTemps[VMDRVDD].enabled = true;
+		DEBUG_PRINT2("Enabled warnings and alarms for SWAVDD1, SWAVVD2, SWAVDD3, DRVdd\n");
+	}
+	else {
+		VoltagesTemps[SWAVDD1].enabled = false;
+		VoltagesTemps[SWAVDD2].enabled = false;
+		VoltagesTemps[SWAVDD3].enabled = false;
+		VoltagesTemps[VMDRVDD].enabled = false;
+		DEBUG_PRINT2("Disabled warnings and alarms for SWAVDD1, SWAVVD2, SWAVDD3, DRVdd\n");
+	}
+	
+	// FE Wanring and Alarms are enabled and disabled in exchangeDataBlockXilinx() function, due checks for Xilixn system monitor
+	
+	if (enable & 0x4){ // Enable FPGA
+		VoltagesTemps[MGAVTT].enabled = true;
+		VoltagesTemps[MGTAV].enabled = true;
+		VoltagesTemps[DDR0VREF].enabled = true;
+		VoltagesTemps[DDR1VREF].enabled = true;
+		DEBUG_PRINT2("Enabled warnings and alarms for MGT_Avtt, MGT_Avcc, DDR0Vref, DDR1Vref\n");
+	}
+	else {
+		VoltagesTemps[MGAVTT].enabled = false;
+		VoltagesTemps[MGTAV].enabled = false;
+		VoltagesTemps[DDR0VREF].enabled = false;
+		VoltagesTemps[DDR1VREF].enabled = false;
+		DEBUG_PRINT2("Disabled warnings and alarms for MGT_Avtt, MGT_Avcc, DDR0Vref, DDR1Vref\n");
+	}
+	
+	
 }
 
 static void IRQfromFPGA(void){
@@ -909,7 +943,7 @@ void StartupStuff(void){
 	StartupLoadSettings();
 	
 	// Interrupt Enable
-	XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int));
+	XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int - FRAM_UPDATE_int));
 	XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
 	ext_irq_register(XO3_LINK0, IRQfromFPGA);	
 	
