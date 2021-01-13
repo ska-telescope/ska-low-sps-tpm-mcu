@@ -160,7 +160,7 @@ void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VG
 	if (VGApwr)			tmp += EN_VGA;
 	
 	XO3_WriteByte(itpm_cpld_regfile_enable_shadow, tmp);
-	//XO3_WriteByte(itpm_cpld_regfile_enable, tmp); // OLD
+	XO3_WriteByte(itpm_cpld_regfile_enable, tmp);
 	
 	DEBUG_PRINT("Powered devices ADC %d - Frontend %d - FPGA %d - SYSR %d - VGA %d\n", ADCpwr, FRONTENDpwr, FPGApwr, SYSRpwr, VGApwr);
 }
@@ -284,16 +284,22 @@ void SKAalarmManage(){
 	/// -------------- ADC -----------------
 	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		//SKAPower(0,0,0,0,0);
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("ADC ALARM %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
+		#ifndef DISABLE_AUTO_SHUTDOWN		
+		SKAPower(0,0,0,0,0);
+		#endif
+		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
+		DEBUG_PRINT1("-----\nADC ALARM %d too high, val %d expected max %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
+		TPMpowerLock = true;
 		//delay_ms(500); // ONLY FOR TEST
 	}
 	else if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		//SKAPower(0,0,0,0,0);
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
+		#ifndef DISABLE_AUTO_SHUTDOWN
+		SKAPower(0,0,0,0,0);
+		#endif
+		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
+		DEBUG_PRINT1("-----\nADC ALARM %d too low, val %d expected min %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
+		TPMpowerLock = true;
 		//delay_ms(500); // ONLY FOR TEST
 	}
 	else if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
@@ -316,16 +322,22 @@ void SKAalarmManage(){
 		for (int i = BOARDTEMP; i < FPGA1FEVA+1; i++){
 			if ((VoltagesTemps[i].ADCread > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled)){
 				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
-				//SKAPower(0,0,0,0,0);
-				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
-				DEBUG_PRINT1("ADC ALARM %d too high, val %x expected max %x\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
+				#ifndef DISABLE_AUTO_SHUTDOWN
+				SKAPower(0,0,0,0,0);
+				#endif
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("-----\nADC ALARM %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
+				TPMpowerLock = true;
 				//delay_ms(500); // ONLY FOR TEST
 			}
 			else if ((VoltagesTemps[i].ADCread < VoltagesTemps[i].alarmTHRdowner) && ((VoltagesTemps[i]).enabled)){
 				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
-				//SKAPower(0,0,0,0,0);
-				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
-				DEBUG_PRINT1("ADC ALARM %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRdowner);
+				#ifndef DISABLE_AUTO_SHUTDOWN
+				SKAPower(0,0,0,0,0);
+				#endif
+				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
+				DEBUG_PRINT1("-----\nADC ALARM %d too low, val %d expected min %d\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRdowner);
+				TPMpowerLock = true;
 				//delay_ms(500); // ONLY FOR TEST
 			}
 			else if ((VoltagesTemps[i].ADCread > VoltagesTemps[i].warningTHRupper) && ((VoltagesTemps[i]).enabled)){
@@ -419,7 +431,12 @@ void exchangeDataBlockXilinx(){
 					XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c0, &res2);
-					if (res2 < 0x1021752) { offset_read0 = false; DEBUG_PRINT1("Xil0 FW Ver 0x%x too old. System Monitor 0 disabled\n", res2); xil0_sm_disabled = true; }
+					if (res2 < 0x1021752) {
+						offset_read0 = false;
+						DEBUG_PRINT1("Xil0 FW Ver 0x%x too old. System Monitor 0 disabled\n", res2);
+						xil0_sm_disabled = true;
+						XO3_WriteByte(itpm_cpld_regfile_enable, res+EN_ADC);
+						}
 					else {
 						offset_read0 = true;
 						VoltagesTemps[FPGA0TEMP].enabled = true;
@@ -452,7 +469,12 @@ void exchangeDataBlockXilinx(){
 					XO3_ReadXilinx(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c1, &res2);
-					if (res2 < 0x1021752) { offset_read1 = false; DEBUG_PRINT1("Xil1 FW Ver 0x%x too old. System Monitor 1 disabled\n", res2); xil1_sm_disabled = true; } 
+					if (res2 < 0x1021752) {
+						offset_read1 = false;
+						DEBUG_PRINT1("Xil1 FW Ver 0x%x too old. System Monitor 1 disabled\n", res2);
+						xil1_sm_disabled = true;
+						XO3_WriteByte(itpm_cpld_regfile_enable, res+EN_ADC);
+						} 
 					else {
 						offset_read1 = true;
 						VoltagesTemps[FPGA1TEMP].enabled = true;
@@ -824,7 +846,8 @@ void SKAsystemMonitorStart(){
 }
 
 int SKAenableCheck(void){
-	uint32_t enable, enableshadow, bypass;
+	int ret;
+	uint32_t enable, enableshadow, bypass, alarm_state;
 	XO3_Read(itpm_cpld_regfile_enable, &enable);
 	XO3_Read(itpm_cpld_regfile_enable_shadow, &enableshadow);
 	XO3_Read(itpm_cpld_regfile_safety_override, &bypass);
@@ -837,17 +860,18 @@ int SKAenableCheck(void){
 			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
 			EnableShadowRegister = enable;
 			DEBUG_PRINT("Powered devices - %x\n", enable);
-			return 0;
+			ret = 0;
 		}
 		else if (TPMoverride){
 			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
 			DEBUG_PRINT("Powered devices - %x - BYPASS ENFORCED\n", enable);
-			return 1;
+			ret = 1;
 		}
 		else {
-			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
+			//XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
 			DEBUG_PRINT("Power request DENIED for %x - Power Locked\n", enable);
-			return -1;
+			SKAPower(0,0,0,0,0);
+			ret = -1;
 		}
 	}
 	
@@ -856,14 +880,16 @@ int SKAenableCheck(void){
 		VoltagesTemps[SWAVDD2].enabled = true;
 		VoltagesTemps[SWAVDD3].enabled = true;
 		VoltagesTemps[VMDRVDD].enabled = true;
-		DEBUG_PRINT2("Enabled warnings and alarms for SWAVDD1, SWAVVD2, SWAVDD3, DRVdd\n");
+		VoltagesTemps[BOARDTEMP].enabled = true;
+		DEBUG_PRINT2("Enabled warnings and alarms for SWAVDD1, SWAVVD2, SWAVDD3, DRVdd, BoardTemp\n");
 	}
 	else {
 		VoltagesTemps[SWAVDD1].enabled = false;
 		VoltagesTemps[SWAVDD2].enabled = false;
 		VoltagesTemps[SWAVDD3].enabled = false;
 		VoltagesTemps[VMDRVDD].enabled = false;
-		DEBUG_PRINT2("Disabled warnings and alarms for SWAVDD1, SWAVVD2, SWAVDD3, DRVdd\n");
+		VoltagesTemps[BOARDTEMP].enabled = false;
+		DEBUG_PRINT2("Disabled warnings and alarms for SWAVDD1, SWAVVD2, SWAVDD3, DRVdd, BoardTemp\n");
 	}
 	
 	// FE Wanring and Alarms are enabled and disabled in exchangeDataBlockXilinx() function, due checks for Xilixn system monitor
@@ -883,6 +909,7 @@ int SKAenableCheck(void){
 		DEBUG_PRINT2("Disabled warnings and alarms for MGT_Avtt, MGT_Avcc, DDR0Vref, DDR1Vref\n");
 	}
 	
+	return ret;
 	
 }
 
@@ -899,9 +926,9 @@ void IRQinternalFPGAhandler(void){
 		
 		// Call
 		
-		if (!(irq_mask & (irq_status & ENABLE_UPDATE_int))) { SKAenableCheck(); } // Enable Interrupt
+		if ((irq_status & ENABLE_UPDATE_int) == ENABLE_UPDATE_int)  { SKAenableCheck(); } // Enable Interrupt
 		
-		if (!(irq_mask & (irq_status & FRAM_UPDATE_int))) { SKAalarmUpdate(); DEBUG_PRINT("FRAM Data Updated IRQ\n"); }
+		if ((irq_status & FRAM_UPDATE_int) == FRAM_UPDATE_int) { SKAalarmUpdate(); DEBUG_PRINT("FRAM Data Updated IRQ\n"); }
 		
 
 
@@ -1034,7 +1061,7 @@ void WDT_Handler(void){
 int main(void)
 {
 	// Cheap delay startup ~1000 ms total
-	for (int i = 0; i < 0xffff; i++) asm("nop");
+	//for (int i = 0; i < 0xffff; i++) asm("nop");
 	
 	/* Initializes MCU, drivers and middleware */
 	atmel_start_init();
