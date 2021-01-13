@@ -44,6 +44,14 @@ enum IRQfpgaMask{
 		MASK_default_int = 0xfff
 	};
 	
+enum EnableBitmask{
+	EN_ADC	= 0x1,
+	EN_FE	= 0x2,
+	EN_FPGA	= 0x4,
+	EN_SYSR	= 0x8,
+	EN_VGA	= 0x10
+	};
+	
 // VOLTAGE DIVIDERS - MULTIPLIERS
 const float VIN_SCALED_DIVIDER						= 12.5; // 12000/960
 const float VM_MAN3V3_DIVIDER						= 3.74782; // 3300 / 880.51
@@ -105,9 +113,5 @@ const uint32_t SETTING_ALARM_THR_FPGA0_FE_CURRENT	= 0xFFFF0000;
 const uint32_t SETTING_ALARM_THR_FPGA1_FE_CURRENT	= 0xFFFF0000;
 
 // ---------------------------------------------------------------------------
-
-enum power_settings {sunday = 1, monday, tuesday = 5,
-wednesday, thursday = 10, friday, saturday};
-
 
 #endif /* SETTINGS_ITPM_H_ */

@@ -153,11 +153,11 @@ static void ADCsync() {
 
 void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VGApwr) {
 	uint8_t tmp = 0;
-	if (ADCpwr)			tmp += 0x1;
-	if (FRONTENDpwr)	tmp += 0x2;
-	if (FPGApwr)		tmp += 0x4;
-	if (SYSRpwr)		tmp += 0x8;
-	if (VGApwr)			tmp += 0x10;
+	if (ADCpwr)			tmp += EN_ADC;
+	if (FRONTENDpwr)	tmp += EN_FE;
+	if (FPGApwr)		tmp += EN_FPGA;
+	if (SYSRpwr)		tmp += EN_SYSR;
+	if (VGApwr)			tmp += EN_VGA;
 	
 	XO3_WriteByte(itpm_cpld_regfile_enable_shadow, tmp);
 	//XO3_WriteByte(itpm_cpld_regfile_enable, tmp); // OLD
@@ -412,7 +412,7 @@ void exchangeDataBlockXilinx(){
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
 		//DEBUG_PRINT2("Xilinx Done - %x - Xilinx Init %x - Enable Xilinx - %x\n", xil_done, xil_init, res);
 		uint32_t res2;
-		if (res & 0x4) { // EnableShadow Reg
+		if (res & EN_FPGA) { // EnableShadow Reg
 			if (((xil_done == 1) && (xil_init == 1)) || ((xil_done == 3) && (xil_init == 3))){
 				if (timer > 4){
 					// Xilinx System Monitor load base address from CPLD
@@ -851,7 +851,7 @@ int SKAenableCheck(void){
 		}
 	}
 	
-	if (enable & 0x1){ // Enable ADC
+	if (enable & EN_ADC){ // Enable ADC
 		VoltagesTemps[SWAVDD1].enabled = true;
 		VoltagesTemps[SWAVDD2].enabled = true;
 		VoltagesTemps[SWAVDD3].enabled = true;
@@ -868,7 +868,7 @@ int SKAenableCheck(void){
 	
 	// FE Wanring and Alarms are enabled and disabled in exchangeDataBlockXilinx() function, due checks for Xilixn system monitor
 	
-	if (enable & 0x4){ // Enable FPGA
+	if (enable & EN_FPGA){ // Enable FPGA
 		VoltagesTemps[MGAVTT].enabled = true;
 		VoltagesTemps[MGTAV].enabled = true;
 		VoltagesTemps[DDR0VREF].enabled = true;
