@@ -435,7 +435,7 @@ void exchangeDataBlockXilinx(){
 						offset_read0 = false;
 						DEBUG_PRINT1("Xil0 FW Ver 0x%x too old. System Monitor 0 disabled\n", res2);
 						xil0_sm_disabled = true;
-						XO3_WriteByte(itpm_cpld_regfile_enable, res+EN_ADC);
+						//XO3_WriteByte(itpm_cpld_regfile_enable, res+EN_ADC);
 						}
 					else {
 						offset_read0 = true;
@@ -473,7 +473,7 @@ void exchangeDataBlockXilinx(){
 						offset_read1 = false;
 						DEBUG_PRINT1("Xil1 FW Ver 0x%x too old. System Monitor 1 disabled\n", res2);
 						xil1_sm_disabled = true;
-						XO3_WriteByte(itpm_cpld_regfile_enable, res+EN_ADC);
+						//XO3_WriteByte(itpm_cpld_regfile_enable, res+EN_ADC);
 						} 
 					else {
 						offset_read1 = true;
@@ -786,7 +786,7 @@ void SKAsystemMonitorStart(){
 	VoltagesTemps[MGTAV].alarmTHRdowner			= uint16_t(SETTING_ALARM_THR_MGT_AV);
 	VoltagesTemps[MGTAV].warningTHRupper		= uint16_t(SETTING_WARN_THR_MGT_AV>>16);
 	VoltagesTemps[MGTAV].warningTHRdowner		= uint16_t(SETTING_WARN_THR_MGT_AV);
-	VoltagesTemps[MGTAV].objectType			= itpm_cpld_regfile_global_status_voltage_B;
+	VoltagesTemps[MGTAV].objectType				= itpm_cpld_regfile_global_status_voltage_B;
 	
 	// ADC15 - PB07 - MGT_AVTT
 	VoltagesTemps[MGAVTT].ADCpin				= 15;
@@ -852,7 +852,7 @@ int SKAenableCheck(void){
 	XO3_Read(itpm_cpld_regfile_enable_shadow, &enableshadow);
 	XO3_Read(itpm_cpld_regfile_safety_override, &bypass);
 	
-	if (bypass == ENABLE_BYPASS_MAGIC) TPMoverride = true;
+	if (bypass == 0x1) TPMoverride = true;
 	else TPMoverride = false;
 	
 	if (enable != enableshadow){
@@ -866,6 +866,12 @@ int SKAenableCheck(void){
 			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
 			DEBUG_PRINT("Powered devices - %x - BYPASS ENFORCED\n", enable);
 			ret = 1;
+		}
+		else if (enable == 0x0){
+			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
+			DEBUG_PRINT("Un-powered alle devices");
+			if (TPMpowerLock) DEBUG_PRINT(" allowed even if board is in locked state.");
+			ret = 2;
 		}
 		else {
 			//XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
