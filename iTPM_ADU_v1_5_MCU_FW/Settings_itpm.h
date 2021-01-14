@@ -52,6 +52,14 @@ enum EnableBitmask{
 	EN_VGA	= 0x10
 	};
 	
+enum PowerGoodBitmaks{
+	PG_MAN_irq	= 0x1,
+	PG_FPGA_irq = 0x2,
+	PG_FE_irq	= 0x4,
+	PG_AVDD_irq	= 0x8,
+	PG_ADC_irq	= 0x10
+	};
+	
 // VOLTAGE DIVIDERS - MULTIPLIERS
 const float VIN_SCALED_DIVIDER						= 12.5; // 12000/960
 const float VM_MAN3V3_DIVIDER						= 3.74782; // 3300 / 880.51

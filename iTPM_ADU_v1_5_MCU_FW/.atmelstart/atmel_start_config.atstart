@@ -167,14 +167,14 @@ drivers:
       eic_arch_enable_irq_setting1: false
       eic_arch_enable_irq_setting10: false
       eic_arch_enable_irq_setting11: false
-      eic_arch_enable_irq_setting12: false
-      eic_arch_enable_irq_setting13: false
-      eic_arch_enable_irq_setting14: false
-      eic_arch_enable_irq_setting15: false
+      eic_arch_enable_irq_setting12: true
+      eic_arch_enable_irq_setting13: true
+      eic_arch_enable_irq_setting14: true
+      eic_arch_enable_irq_setting15: true
       eic_arch_enable_irq_setting2: false
       eic_arch_enable_irq_setting3: true
       eic_arch_enable_irq_setting4: false
-      eic_arch_enable_irq_setting5: false
+      eic_arch_enable_irq_setting5: true
       eic_arch_enable_irq_setting6: false
       eic_arch_enable_irq_setting7: false
       eic_arch_enable_irq_setting8: false
@@ -183,14 +183,14 @@ drivers:
       eic_arch_extinteo1: false
       eic_arch_extinteo10: false
       eic_arch_extinteo11: false
-      eic_arch_extinteo12: false
-      eic_arch_extinteo13: false
-      eic_arch_extinteo14: false
-      eic_arch_extinteo15: false
+      eic_arch_extinteo12: true
+      eic_arch_extinteo13: true
+      eic_arch_extinteo14: true
+      eic_arch_extinteo15: true
       eic_arch_extinteo2: false
       eic_arch_extinteo3: true
       eic_arch_extinteo4: false
-      eic_arch_extinteo5: false
+      eic_arch_extinteo5: true
       eic_arch_extinteo6: false
       eic_arch_extinteo7: false
       eic_arch_extinteo8: false
@@ -217,14 +217,14 @@ drivers:
       eic_arch_sense1: No detection
       eic_arch_sense10: No detection
       eic_arch_sense11: No detection
-      eic_arch_sense12: No detection
-      eic_arch_sense13: No detection
-      eic_arch_sense14: No detection
-      eic_arch_sense15: No detection
+      eic_arch_sense12: Both-edges detection
+      eic_arch_sense13: Both-edges detection
+      eic_arch_sense14: Both-edges detection
+      eic_arch_sense15: Both-edges detection
       eic_arch_sense2: No detection
       eic_arch_sense3: Rising-edge detection
       eic_arch_sense4: No detection
-      eic_arch_sense5: No detection
+      eic_arch_sense5: Both-edges detection
       eic_arch_sense6: No detection
       eic_arch_sense7: No detection
       eic_arch_sense8: No detection
@@ -260,6 +260,41 @@ drivers:
       definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::optional_signal_definition::EIC.EXTINT.4
       name: EIC/EXTINT/4
       label: EXTINT/4
+    - identifier: EXTERNAL_IRQ_0:EXTINT/5
+      pad: PA21
+      mode: Enabled
+      configuration: null
+      definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::optional_signal_definition::EIC.EXTINT.5
+      name: EIC/EXTINT/5
+      label: EXTINT/5
+    - identifier: EXTERNAL_IRQ_0:EXTINT/12
+      pad: PA24
+      mode: Enabled
+      configuration: null
+      definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::optional_signal_definition::EIC.EXTINT.12
+      name: EIC/EXTINT/12
+      label: EXTINT/12
+    - identifier: EXTERNAL_IRQ_0:EXTINT/13
+      pad: PA25
+      mode: Enabled
+      configuration: null
+      definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::optional_signal_definition::EIC.EXTINT.13
+      name: EIC/EXTINT/13
+      label: EXTINT/13
+    - identifier: EXTERNAL_IRQ_0:EXTINT/14
+      pad: PB30
+      mode: Enabled
+      configuration: null
+      definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::optional_signal_definition::EIC.EXTINT.14
+      name: EIC/EXTINT/14
+      label: EXTINT/14
+    - identifier: EXTERNAL_IRQ_0:EXTINT/15
+      pad: PB31
+      mode: Enabled
+      configuration: null
+      definition: Atmel:SAMD21_Drivers:0.0.1::SAMD21J18A-AF::optional_signal_definition::EIC.EXTINT.15
+      name: EIC/EXTINT/15
+      label: EXTINT/15
     variant: null
     clocks:
       domain_group:
@@ -419,7 +454,7 @@ drivers:
       usart_arch_sampa: 7-8-9 (3-4-5 8-bit over-sampling)
       usart_arch_sampr: 16x arithmetic
       usart_arch_sfde: false
-      usart_baud_rate: 115200
+      usart_baud_rate: 256000
       usart_character_size: 8 bits
       usart_parity: No parity
       usart_rx_enable: true

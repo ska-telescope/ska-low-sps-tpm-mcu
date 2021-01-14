@@ -234,14 +234,14 @@
 // <e> Interrupt 5 Settings
 // <id> eic_arch_enable_irq_setting5
 #ifndef CONF_EIC_ENABLE_IRQ_SETTING5
-#define CONF_EIC_ENABLE_IRQ_SETTING5 0
+#define CONF_EIC_ENABLE_IRQ_SETTING5 1
 #endif
 
 // <q> External Interrupt 5 Event Output Enable
 // <i> Indicates whether the external interrupt 5 event output is enabled or not
 // <id> eic_arch_extinteo5
 #ifndef CONF_EIC_EXTINTEO5
-#define CONF_EIC_EXTINTEO5 0
+#define CONF_EIC_EXTINTEO5 1
 #endif
 
 // <q> External Interrupt 5 Wake-up Enable
@@ -268,7 +268,7 @@
 // <i> This defines input sense trigger
 // <id> eic_arch_sense5
 #ifndef CONF_EIC_SENSE5
-#define CONF_EIC_SENSE5 EIC_NMICTRL_NMISENSE_NONE_Val
+#define CONF_EIC_SENSE5 EIC_NMICTRL_NMISENSE_BOTH_Val
 #endif
 // </e>
 
@@ -521,14 +521,14 @@
 // <e> Interrupt 12 Settings
 // <id> eic_arch_enable_irq_setting12
 #ifndef CONF_EIC_ENABLE_IRQ_SETTING12
-#define CONF_EIC_ENABLE_IRQ_SETTING12 0
+#define CONF_EIC_ENABLE_IRQ_SETTING12 1
 #endif
 
 // <q> External Interrupt 12 Event Output Enable
 // <i> Indicates whether the external interrupt 12 event output is enabled or not
 // <id> eic_arch_extinteo12
 #ifndef CONF_EIC_EXTINTEO12
-#define CONF_EIC_EXTINTEO12 0
+#define CONF_EIC_EXTINTEO12 1
 #endif
 
 // <q> External Interrupt 12 Wake-up Enable
@@ -555,21 +555,21 @@
 // <i> This defines input sense trigger
 // <id> eic_arch_sense12
 #ifndef CONF_EIC_SENSE12
-#define CONF_EIC_SENSE12 EIC_NMICTRL_NMISENSE_NONE_Val
+#define CONF_EIC_SENSE12 EIC_NMICTRL_NMISENSE_BOTH_Val
 #endif
 // </e>
 
 // <e> Interrupt 13 Settings
 // <id> eic_arch_enable_irq_setting13
 #ifndef CONF_EIC_ENABLE_IRQ_SETTING13
-#define CONF_EIC_ENABLE_IRQ_SETTING13 0
+#define CONF_EIC_ENABLE_IRQ_SETTING13 1
 #endif
 
 // <q> External Interrupt 13 Event Output Enable
 // <i> Indicates whether the external interrupt 13 event output is enabled or not
 // <id> eic_arch_extinteo13
 #ifndef CONF_EIC_EXTINTEO13
-#define CONF_EIC_EXTINTEO13 0
+#define CONF_EIC_EXTINTEO13 1
 #endif
 
 // <q> External Interrupt 13 Wake-up Enable
@@ -596,21 +596,21 @@
 // <i> This defines input sense trigger
 // <id> eic_arch_sense13
 #ifndef CONF_EIC_SENSE13
-#define CONF_EIC_SENSE13 EIC_NMICTRL_NMISENSE_NONE_Val
+#define CONF_EIC_SENSE13 EIC_NMICTRL_NMISENSE_BOTH_Val
 #endif
 // </e>
 
 // <e> Interrupt 14 Settings
 // <id> eic_arch_enable_irq_setting14
 #ifndef CONF_EIC_ENABLE_IRQ_SETTING14
-#define CONF_EIC_ENABLE_IRQ_SETTING14 0
+#define CONF_EIC_ENABLE_IRQ_SETTING14 1
 #endif
 
 // <q> External Interrupt 14 Event Output Enable
 // <i> Indicates whether the external interrupt 14 event output is enabled or not
 // <id> eic_arch_extinteo14
 #ifndef CONF_EIC_EXTINTEO14
-#define CONF_EIC_EXTINTEO14 0
+#define CONF_EIC_EXTINTEO14 1
 #endif
 
 // <q> External Interrupt 14 Wake-up Enable
@@ -637,21 +637,21 @@
 // <i> This defines input sense trigger
 // <id> eic_arch_sense14
 #ifndef CONF_EIC_SENSE14
-#define CONF_EIC_SENSE14 EIC_NMICTRL_NMISENSE_NONE_Val
+#define CONF_EIC_SENSE14 EIC_NMICTRL_NMISENSE_BOTH_Val
 #endif
 // </e>
 
 // <e> Interrupt 15 Settings
 // <id> eic_arch_enable_irq_setting15
 #ifndef CONF_EIC_ENABLE_IRQ_SETTING15
-#define CONF_EIC_ENABLE_IRQ_SETTING15 0
+#define CONF_EIC_ENABLE_IRQ_SETTING15 1
 #endif
 
 // <q> External Interrupt 15 Event Output Enable
 // <i> Indicates whether the external interrupt 15 event output is enabled or not
 // <id> eic_arch_extinteo15
 #ifndef CONF_EIC_EXTINTEO15
-#define CONF_EIC_EXTINTEO15 0
+#define CONF_EIC_EXTINTEO15 1
 #endif
 
 // <q> External Interrupt 15 Wake-up Enable
@@ -678,12 +678,13 @@
 // <i> This defines input sense trigger
 // <id> eic_arch_sense15
 #ifndef CONF_EIC_SENSE15
-#define CONF_EIC_SENSE15 EIC_NMICTRL_NMISENSE_NONE_Val
+#define CONF_EIC_SENSE15 EIC_NMICTRL_NMISENSE_BOTH_Val
 #endif
 // </e>
 
 #ifndef CONFIG_EIC_EXTINT_MAP
-#define CONFIG_EIC_EXTINT_MAP {3, PIN_PA19}, {4, PIN_PA20},
+#define CONFIG_EIC_EXTINT_MAP                                                                                          \
+	{3, PIN_PA19}, {4, PIN_PA20}, {5, PIN_PA21}, {12, PIN_PA24}, {13, PIN_PA25}, {14, PIN_PB30}, {15, PIN_PB31},
 #endif
 
 // <<< end of configuration section >>>

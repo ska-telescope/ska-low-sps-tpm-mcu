@@ -146,6 +146,71 @@ void EXTERNAL_IRQ_0_init(void)
 
 	gpio_set_pin_function(XO3_LINK1, PINMUX_PA20A_EIC_EXTINT4);
 
+	// Set pin direction to input
+	gpio_set_pin_direction(PG_FPGA, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(PG_FPGA,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(PG_FPGA, PINMUX_PA21A_EIC_EXTINT5);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(PG_FE, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(PG_FE,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(PG_FE, PINMUX_PA24A_EIC_EXTINT12);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(PG_AVDD, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(PG_AVDD,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(PG_AVDD, PINMUX_PA25A_EIC_EXTINT13);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(PG_MAN, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(PG_MAN,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(PG_MAN, PINMUX_PB30A_EIC_EXTINT14);
+
+	// Set pin direction to input
+	gpio_set_pin_direction(PG_ADC, GPIO_DIRECTION_IN);
+
+	gpio_set_pin_pull_mode(PG_ADC,
+	                       // <y> Pull configuration
+	                       // <id> pad_pull_config
+	                       // <GPIO_PULL_OFF"> Off
+	                       // <GPIO_PULL_UP"> Pull-up
+	                       // <GPIO_PULL_DOWN"> Pull-down
+	                       GPIO_PULL_OFF);
+
+	gpio_set_pin_function(PG_ADC, PINMUX_PB31A_EIC_EXTINT15);
+
 	ext_irq_init();
 }
 
@@ -279,51 +344,6 @@ void system_init(void)
 {
 	init_mcu();
 
-	// GPIO on PA21
-
-	// Set pin direction to input
-	gpio_set_pin_direction(PG_FPGA, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(PG_FPGA,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(PG_FPGA, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA24
-
-	// Set pin direction to input
-	gpio_set_pin_direction(PG_FE, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(PG_FE,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(PG_FE, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PA25
-
-	// Set pin direction to input
-	gpio_set_pin_direction(PG_AVDD, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(PG_AVDD,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(PG_AVDD, GPIO_PIN_FUNCTION_OFF);
-
 	// GPIO on PA27
 
 	gpio_set_pin_level(USR_LED0,
@@ -393,36 +413,6 @@ void system_init(void)
 	gpio_set_pin_direction(USR_LED1, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(USR_LED1, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PB30
-
-	// Set pin direction to input
-	gpio_set_pin_direction(PG_MAN, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(PG_MAN,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(PG_MAN, GPIO_PIN_FUNCTION_OFF);
-
-	// GPIO on PB31
-
-	// Set pin direction to input
-	gpio_set_pin_direction(PG_ADC, GPIO_DIRECTION_IN);
-
-	gpio_set_pin_pull_mode(PG_ADC,
-	                       // <y> Pull configuration
-	                       // <id> pad_pull_config
-	                       // <GPIO_PULL_OFF"> Off
-	                       // <GPIO_PULL_UP"> Pull-up
-	                       // <GPIO_PULL_DOWN"> Pull-down
-	                       GPIO_PULL_OFF);
-
-	gpio_set_pin_function(PG_ADC, GPIO_PIN_FUNCTION_OFF);
 
 	ADC_0_init();
 	EXTERNAL_IRQ_0_init();

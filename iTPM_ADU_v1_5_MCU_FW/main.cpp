@@ -89,6 +89,7 @@ static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC
 bool irqTimerSlow = false;
 bool irqTimerFast = false;
 bool irqExternalFPGA = false;
+uint8_t irqPG = 0x0;
 
 uint32_t ADT7408_temp_raw;
 uint16_t ADT7408_temp;
@@ -624,6 +625,8 @@ void StartupLoadSettings(void){
 	
 	framWrite(FRAM_WARN_ALARM_UPDATE, SETTING_WARN_ALARM_UPDATE);
 	
+	framWrite(FRAM_POWERGOOD, 0x0);
+	
 	framWrite(FRAM_WARN_THR_SW_AVDD1			, SETTING_WARN_THR_SW_AVDD1				);
 	framWrite(FRAM_WARN_THR_SW_AVDD2			, SETTING_WARN_THR_SW_AVDD2				);
 	framWrite(FRAM_WARN_THR_AVDD3				, SETTING_WARN_THR_AVDD3				);
@@ -919,16 +922,36 @@ int SKAenableCheck(void){
 	
 }
 
-static void IRQfromFPGA(void){
-		irqExternalFPGA = true;
+static void IRQfromCPLD(void){
+	irqExternalFPGA = true;
 }
 
-void IRQinternalFPGAhandler(void){
+static void IRQpgFPGA(void){
+	if(irqPG == 0) irqPG = PG_FPGA_irq;
+}
+
+static void IRQpgFE(void){
+	if(irqPG == 0) irqPG = PG_FE_irq;
+}
+
+static void IRQpgAVDD(void){
+	if(irqPG == 0) irqPG = PG_AVDD_irq;
+}
+
+static void IRQpgMAN(void){
+	if(irqPG == 0) irqPG = PG_MAN_irq;
+}
+
+static void IRQpgADC(void){
+	if(irqPG == 0) irqPG = PG_ADC_irq;
+}
+
+void IRQinternalCPLDhandler(void){
 		uint32_t irq_status, irq_mask;
 		
 		XO3_Read(itpm_cpld_intc_status, &irq_status);
 		XO3_Read(itpm_cpld_intc_mask, &irq_mask);
-		DEBUG_PRINT2("IRQ FPGA Val: %x - Mask %x\n", irq_status, irq_mask);
+		DEBUG_PRINT2("IRQ CPLD Val: %x - Mask %x\n", irq_status, irq_mask);
 		
 		// Call
 		
@@ -942,6 +965,22 @@ void IRQinternalFPGAhandler(void){
 		XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int); // Clean FPGA IRQ
 		
 		irqExternalFPGA = false;
+}
+
+void IRQinternalPGhandler(void){
+	uint32_t powergood_register = 0;
+	
+	if(gpio_get_pin_level(PG_FPGA)) powergood_register += PG_FPGA_irq;
+	if(gpio_get_pin_level(PG_FE  )) powergood_register += PG_FE_irq;
+	if(gpio_get_pin_level(PG_AVDD)) powergood_register += PG_AVDD_irq;
+	if(gpio_get_pin_level(PG_MAN )) powergood_register += PG_MAN_irq;
+	if(gpio_get_pin_level(PG_ADC )) powergood_register += PG_ADC_irq;
+	
+	framWrite(FRAM_POWERGOOD, powergood_register);
+	
+	DEBUG_PRINT("IRQ PowerGood status changed - 0x%x", powergood_register);
+	
+	irqPG = 0;
 }
 
 void StartupStuff(void){
@@ -978,7 +1017,12 @@ void StartupStuff(void){
 	// Interrupt Enable
 	XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int - FRAM_UPDATE_int));
 	XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
-	ext_irq_register(XO3_LINK0, IRQfromFPGA);	
+	ext_irq_register(XO3_LINK0, IRQfromCPLD); // Interrupt from CPLD
+	ext_irq_register(PG_FPGA, IRQpgFPGA);
+	ext_irq_register(PG_FE, IRQpgFE);
+	ext_irq_register(PG_AVDD, IRQpgAVDD);
+	ext_irq_register(PG_MAN, IRQpgMAN);
+	ext_irq_register(PG_ADC, IRQpgADC);
 	
 	XO3_WriteByte(itpm_cpld_regfile_safety_override, 0x0);
 	
@@ -1127,8 +1171,9 @@ int main(void)
 
 		ADCreadSingle();
 		
-		if (irqExternalFPGA) IRQinternalFPGAhandler();
+		if (irqExternalFPGA) IRQinternalCPLDhandler();
 		if (irqTimerSlow) taskSlow();
+		if (irqPG > 0) IRQinternalPGhandler();
 		
 	}
 }
