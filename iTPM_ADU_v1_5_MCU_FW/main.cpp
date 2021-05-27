@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000107;
+const uint32_t _build_version = 0xb0000113;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -104,6 +104,7 @@ uint32_t EnableShadowRegister = 0;
 
 bool TPMpowerLock = false;
 bool TPMoverride = false;
+bool TPMoverrideAutoShutdown = false;
 
 uint32_t InternalCounter_CPLD_update = 0;
 uint32_t InternalCounter_ADC_update = 0;
@@ -286,7 +287,7 @@ void SKAalarmManage(){
 	if ((VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
 		#ifndef DISABLE_AUTO_SHUTDOWN		
-		SKAPower(0,0,0,0,0);
+		if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
 		#endif
 		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
 		DEBUG_PRINT1("-----\nADC ALARM %d too high, val %d expected max %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
@@ -296,7 +297,7 @@ void SKAalarmManage(){
 	else if ((VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
 		#ifndef DISABLE_AUTO_SHUTDOWN
-		SKAPower(0,0,0,0,0);
+		if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
 		#endif
 		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
 		DEBUG_PRINT1("-----\nADC ALARM %d too low, val %d expected min %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
@@ -324,7 +325,7 @@ void SKAalarmManage(){
 			if ((VoltagesTemps[i].ADCread > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled)){
 				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 				#ifndef DISABLE_AUTO_SHUTDOWN
-				SKAPower(0,0,0,0,0);
+				if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
 				#endif
 				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
 				DEBUG_PRINT1("-----\nADC ALARM %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
@@ -334,7 +335,7 @@ void SKAalarmManage(){
 			else if ((VoltagesTemps[i].ADCread < VoltagesTemps[i].alarmTHRdowner) && ((VoltagesTemps[i]).enabled)){
 				XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 				#ifndef DISABLE_AUTO_SHUTDOWN
-				SKAPower(0,0,0,0,0);
+				if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
 				#endif
 				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
 				DEBUG_PRINT1("-----\nADC ALARM %d too low, val %d expected min %d\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRdowner);
@@ -381,6 +382,9 @@ int32_t SAMinternalTempConv(uint32_t raw) {
 
 void exchangeDataBlockXilinx(){
 	//#define XILINX_DEBUG_TEXT
+	
+	if (TPMoverrideAutoShutdown) return;
+	
 	uint8_t timeout = 0;
 	bool xil_ack = false;
 	static bool offset_read0 = false;
@@ -850,13 +854,17 @@ void SKAsystemMonitorStart(){
 
 int SKAenableCheck(void){
 	int ret;
-	uint32_t enable, enableshadow, bypass, alarm_state;
+	uint32_t enable, enableshadow, bypass, alarm_state, safety_override;
+	
 	XO3_Read(itpm_cpld_regfile_enable, &enable);
 	XO3_Read(itpm_cpld_regfile_enable_shadow, &enableshadow);
 	XO3_Read(itpm_cpld_regfile_safety_override, &bypass);
+	framRead(FRAM_MCU_SA_OV, &safety_override);
 	
-	if (bypass == 0x1) TPMoverride = true;
-	else TPMoverride = false;
+	if (bypass == 0x1) { TPMoverride = true; }
+	else if (safety_override == 0xBADC0DE) { TPMoverrideAutoShutdown = true; DEBUG_PRINT("SAFETY OVERRIDE ENABLED\n"); }
+	else if (safety_override == 0x0) { TPMoverrideAutoShutdown = false; DEBUG_PRINT("SAFETY OVERRIDE DISABLED\n");}
+	else { TPMoverride = false; }
 	
 	if (enable != enableshadow){
 		if (!TPMpowerLock){
@@ -947,11 +955,22 @@ static void IRQpgADC(void){
 }
 
 void IRQinternalCPLDhandler(void){
-		uint32_t irq_status, irq_mask;
+		uint32_t irq_status, irq_mask, res;
+		
+		framRead(FRAM_MCU_VERSION, &res);		
+		if (res != _build_version){
+			DEBUG_PRINT1("CRITICAL ERROR: IRQ NOT HANDALAD, no SPI bus communication. Expected %x read %x\n", _build_version, res);
+			return;
+		}		
 		
 		XO3_Read(itpm_cpld_intc_status, &irq_status);
 		XO3_Read(itpm_cpld_intc_mask, &irq_mask);
 		DEBUG_PRINT2("IRQ CPLD Val: %x - Mask %x\n", irq_status, irq_mask);
+		
+		if (irq_status == 0xFFFFFFFF){
+			DEBUG_PRINT1("CRITICAL ERROR: IRQ NOT HANDALAD, no SPI bus communication. IRQ %x is not a valid value\n", irq_status);
+			return;
+		}
 		
 		// Call
 		
@@ -978,7 +997,7 @@ void IRQinternalPGhandler(void){
 	
 	framWrite(FRAM_POWERGOOD, powergood_register);
 	
-	DEBUG_PRINT("IRQ PowerGood status changed - 0x%x", powergood_register);
+	DEBUG_PRINT("IRQ PowerGood status changed - 0x%x\n", powergood_register);
 	
 	irqPG = 0;
 }
