@@ -130,27 +130,50 @@ SPI_sync(
 			}
 		}
 		
+		uint8_t scoda_tx = 0xff;		
+		struct spi_xfer scoda;		
 		struct spi_xfer transfer;
 		
-		transfer.rxbuf = rxbuf;
-		transfer.txbuf = tmp;
-		transfer.size  = _count;
-
-		gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS	
-		/*for(int i=0;i<_count;i++){
-			//spi_write(SPI_MASTER, tmp[i], 0, 0);
-			//rxbuf[i]=SPI1.transfer(tmp[i]);
-			//spi_transceive_packet(MYSPI, tmp[i], rxbuf[i], sizeof(tmp[i]));
-		}*/
-		int32_t risp = spi_m_sync_transfer(&SPI_0, &transfer);
-		//io_write(io, tmp, _count);
-		//io_read(io, rxBuffer, _count);
-		//spi_transceive_packet(MYSPI, tmp, rxbuf, _count);
-		gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
+		if (tmp[2] != 0x05){
+			transfer.rxbuf = rxbuf;
+			transfer.txbuf = tmp;
+			transfer.size  = _count;
+			
+			for (int i = 0; i < _count-1; i++) rxbuf[i] = 0xaa;
+			
+			gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS	
+			int32_t risp = spi_m_sync_transfer(&SPI_0, &transfer);
+			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
+			
+			memcpy(rxBuffer, &rxbuf[offset+latency], length);
+		}
+		else {
+			for (int i = 0; i < 8; i++) rxbuf[i] = 0xaa;
+			
+			transfer.rxbuf = rxbuf;
+			transfer.txbuf = tmp;
+			transfer.size  = 7;
+			
+			gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS
+			int32_t risp = spi_m_sync_transfer(&SPI_0, &transfer);
+			
+			scoda.rxbuf = rxbuf;
+			scoda.txbuf = &scoda_tx;
+			scoda.size  = 1;
+			
+			while (1){
+				risp = spi_m_sync_transfer(&SPI_0, &scoda);
+				if (rxbuf[0] == 0x0) break;
+			}
+			
+			scoda.size  = 5;
+			
+			risp = spi_m_sync_transfer(&SPI_0, &scoda);
+			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
+			
+			memcpy(rxBuffer, rxbuf, 4);
+		}		
 		
-		
-		
-		memcpy(rxBuffer, &rxbuf[offset+latency], length);
 		if (!little_endian) {
 			uint16_t* ptr = (uint16_t*)rxBuffer;
 
@@ -209,7 +232,7 @@ XO3_Read(
     void*     privateData
 )*/
 int
-XO3_Read(
+XO3_Read3(
     uint32_t  regs,
     uint32_t* value
 )
@@ -227,7 +250,43 @@ XO3_Read(
 
   int success = SPI_sync(1, txBuffer, rxBuffer, 10);
 
+  //dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
   dato = (((rxBuffer[6] & 0xFF) << 24) | ((rxBuffer[7] & 0xFF) << 16) | ((rxBuffer[8] & 0xFF) << 8) | rxBuffer[9]);
+  //memcpy(dato, rxBuffer[6], 4);
+  //dato=dato&0x0000ffff;
+  *value=dato;
+  return success;
+} // XO3_Read
+
+/*
+int
+XO3_Read(
+    void*     context,
+    uint32_t  offset,
+    uint32_t* value,
+    void*     privateData
+)*/
+int
+XO3_Read(
+    uint32_t  regs,
+    uint32_t* value
+)
+{
+  uint8_t txBuffer[10];
+  uint8_t rxBuffer[10];
+  uint32_t dato=0;
+  memset(txBuffer, 0, 8);
+
+  txBuffer[0] = 0x05;
+  txBuffer[1] = 0xFF & (regs >> 24);
+  txBuffer[2] = 0xFF & (regs >> 16);
+  txBuffer[3] = 0xFF & (regs >> 8);
+  txBuffer[4] = 0xFF & (regs);
+
+  int success = SPI_sync(1, txBuffer, rxBuffer, 10);
+
+  dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
+  //dato = (((rxBuffer[6] & 0xFF) << 24) | ((rxBuffer[7] & 0xFF) << 16) | ((rxBuffer[8] & 0xFF) << 8) | rxBuffer[9]);
   //memcpy(dato, rxBuffer[6], 4);
   //dato=dato&0x0000ffff;
   *value=dato;

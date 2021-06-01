@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000113;
+const uint32_t _build_version = 0xb0000115;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -1005,6 +1005,16 @@ void IRQinternalPGhandler(void){
 void StartupStuff(void){
 	uint32_t res;
 	
+	res = PM->RCAUSE.reg;
+	 DEBUG_PRINT("\nRESET REASON 0x%x", res);
+	if (PM->RCAUSE.bit.POR) { DEBUG_PRINT(" - Power On Reset\n", res); }
+	if (PM->RCAUSE.bit.BOD12) { DEBUG_PRINT(" - BrownOut 12\n", res); }
+	if (PM->RCAUSE.bit.BOD33) { DEBUG_PRINT(" - BrownOut 33\n", res); }
+	if (PM->RCAUSE.bit.EXT) { DEBUG_PRINT(" - External Reset (PIN)\n", res); }
+	//if (PM->RCAUSE.bit.WDT) { DEBUG_PRINT("\nRESET REASON 0x%x - WatchDog\n", res); }
+	if (PM->RCAUSE.bit.SYST) { DEBUG_PRINT(" - System Reset Request (JTAG or MCU)\n", res); }
+	
+	
 	DEBUG_PRINT("\nSKA iTPM 1.6 - Debug Enabled\n");
 	DEBUG_PRINT("Debug level: %d\n", (int) DEBUG);
 	
@@ -1136,12 +1146,27 @@ int main(void)
 	atmel_start_init();
 	
 	//SysTick_Config(1);
+	/*bool pippo = true;
+	
+	if (pollingOld == 0x25) pippo = false;
+	
+	while (pippo){
+		asm("nop");
+	}
+	
+	uint32_t pippo2;
+	//framWrite(FRAM_MCU_VERSION, _build_version);				
+	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);
+	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);
+	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);*/
+	
+
 	
 	StartupStuff();
 	
 	uint32_t vers;
 	
-	
+	XO3_Read(itpm_cpld_regfile_date_code, &vers);
 	
 	
 	
@@ -1189,6 +1214,8 @@ int main(void)
 		gpio_toggle_pin_level(USR_LED1);
 
 		ADCreadSingle();
+		
+		//if (vers == 0xdead) pippo = true;
 		
 		if (irqExternalFPGA) IRQinternalCPLDhandler();
 		if (irqTimerSlow) taskSlow();

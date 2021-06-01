@@ -45,6 +45,13 @@ XO3_Read(
 );
 
 int
+XO3_Read3(
+	uint32_t  regs,
+	uint32_t* value
+);
+
+
+int
 XO3_ReadXilinx(
 uint32_t  regs,
 uint32_t* value
