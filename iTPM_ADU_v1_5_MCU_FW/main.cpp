@@ -58,7 +58,8 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000117;
+const uint32_t _build_version = 0xb0000118;
+
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -82,6 +83,9 @@ struct ADCstruct VoltagesTemps[ADCCOLUMNS+TEMPS_SENSOR+FPGA_FE_CURRENT]; // +3 T
 int anaReadPos = 0;
 bool anaNotReady = true;
 
+/* ----- GLOBAL FLAGS -------*/
+volatile bool spi_timeout = false;
+
 /* --------- VAR -------------------- */
 
 static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC 2^16
@@ -89,6 +93,8 @@ static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC
 bool irqTimerSlow = false;
 bool irqTimerFast = false;
 bool irqExternalFPGA = false;
+
+
 uint8_t irqPG = 0x0;
 
 uint32_t ADT7408_temp_raw;
@@ -959,7 +965,7 @@ void IRQinternalCPLDhandler(void){
 		
 		framRead(FRAM_MCU_VERSION, &res);		
 		if (res != _build_version){
-			DEBUG_PRINT1("CRITICAL ERROR: IRQ NOT HANDALAD, no SPI bus communication. Expected %x read %x\n", _build_version, res);
+			DEBUG_PRINT1("CRITICAL ERROR: IRQ NOT HANDLED, no SPI bus communication. Expected %x read %x\n", _build_version, res);
 			return;
 		}		
 		

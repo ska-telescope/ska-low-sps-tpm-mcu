@@ -78,6 +78,7 @@ void deb_print_spi(uint8_t debug_level = 0){
 #define nullptr ((void*)0)
 #endif
 
+
 int
 SPI_sync(
 		uint32_t       slaveId,
@@ -207,8 +208,14 @@ SPI_sync(
 			
 			while (1){
 				risp = spi_m_sync_transfer(&SPI_0, &scoda);
-				if (rxbuf[0] == 0x0) break;
+				if (rxbuf[0] == 0x0) break;	
+				else if (rxbuf[0] == 0x11)
+				{
+					gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
+					return -1;
+				}
 				count_delay++;
+
 			}
 			
 			scoda.size  = 5;
@@ -216,7 +223,6 @@ SPI_sync(
 			risp = spi_m_sync_transfer(&SPI_0, &scoda);
 			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
 			if (count_delay > 2) DEBUG_PRINT_SPI("Delay Count %d\n", count_delay);
-
 			memcpy(rxBuffer, rxbuf, 4);
 		}		
 		
@@ -254,7 +260,8 @@ XO3_WriteByte(
 {
 	uint8_t txBuffer[10];
 	uint8_t rxBuffer[10];
-
+	uint8_t retry=5;
+	int success=0;
 	memset(txBuffer, 0, 8);
 
 	txBuffer[0] = 0x01;
@@ -267,7 +274,12 @@ XO3_WriteByte(
 	txBuffer[7] = 0xFF & (value >> 8);
 	txBuffer[8] = 0xFF & (value);
 
-  int success = SPI_sync(1, txBuffer, rxBuffer, 9);
+	while(retry>0) 
+	{
+		success = SPI_sync(1, txBuffer, rxBuffer, 9);
+		if (success == -1) retry=retry-1;
+		else break;
+	} 
 } // XO3_Write
 /*
 int
@@ -287,6 +299,8 @@ XO3_Read3(
   uint8_t rxBuffer[10];
   uint32_t dato=0;
   memset(txBuffer, 0, 8);
+  int success=0;
+  uint8_t retry=5;
 
   txBuffer[0] = 0x03;
   txBuffer[1] = 0xFF & (regs >> 24);
@@ -294,7 +308,15 @@ XO3_Read3(
   txBuffer[3] = 0xFF & (regs >> 8);
   txBuffer[4] = 0xFF & (regs);
 
-  int success = SPI_sync(1, txBuffer, rxBuffer, 10);
+  //int success = SPI_sync(1, txBuffer, rxBuffer, 10);
+  
+   while(retry>0)
+   {
+	success = SPI_sync(1, txBuffer, rxBuffer, 10);
+	if (success == -1) retry=retry-1;
+	else break;
+    }
+  
 
   //dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
   dato = (((rxBuffer[6] & 0xFF) << 24) | ((rxBuffer[7] & 0xFF) << 16) | ((rxBuffer[8] & 0xFF) << 8) | rxBuffer[9]);
@@ -321,6 +343,8 @@ XO3_Read(
   uint8_t txBuffer[10];
   uint8_t rxBuffer[10];
   uint32_t dato=0;
+  uint8_t retry=5;
+  int success =0;
   memset(txBuffer, 0, 8);
 
   txBuffer[0] = 0x05;
@@ -329,7 +353,13 @@ XO3_Read(
   txBuffer[3] = 0xFF & (regs >> 8);
   txBuffer[4] = 0xFF & (regs);
 
-  int success = SPI_sync(1, txBuffer, rxBuffer, 10);
+  //int success = SPI_sync(1, txBuffer, rxBuffer, 10);
+while(retry>0)
+{
+	success = SPI_sync(1, txBuffer, rxBuffer, 10);
+	if (success == -1) retry=retry-1;
+	else break;
+}
 
   dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
   //dato = (((rxBuffer[6] & 0xFF) << 24) | ((rxBuffer[7] & 0xFF) << 16) | ((rxBuffer[8] & 0xFF) << 8) | rxBuffer[9]);
@@ -356,6 +386,8 @@ XO3_ReadXilinx(
   uint8_t txBuffer[10];
   uint8_t rxBuffer[12];
   uint32_t dato=0;
+    uint8_t retry=5;
+    int success =0;
   memset(txBuffer, 0, 8);
 
   txBuffer[0] = 0x05;
@@ -364,12 +396,19 @@ XO3_ReadXilinx(
   txBuffer[3] = 0xFF & (regs >> 8);
   txBuffer[4] = 0xFF & (regs);
 
-  int success = SPI_sync(1, txBuffer, rxBuffer, 10);
 
-  dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
+
 
   //int success = SPI_sync(1, txBuffer, rxBuffer, 30); //11
-
+  
+  while(retry>0)
+  {
+	  success = SPI_sync(1, txBuffer, rxBuffer, 30); //11
+	  if (success == -1) retry=retry-1;
+	  else break;
+  }
+  
+  dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
   //dato = (((rxBuffer[7] & 0xFF) << 24) | ((rxBuffer[8] & 0xFF) << 16) | ((rxBuffer[9] & 0xFF) << 8) | rxBuffer[10]);
   //memcpy(dato, rxBuffer[6], 4);
   //dato=dato&0x0000ffff;
