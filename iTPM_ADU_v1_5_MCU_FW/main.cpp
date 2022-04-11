@@ -58,7 +58,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb0000115;
+const uint32_t _build_version = 0xb0000117;
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
 
@@ -1144,18 +1144,35 @@ int main(void)
 	
 	/* Initializes MCU, drivers and middleware */
 	atmel_start_init();
+	uint32_t data=0;
 	
 	//SysTick_Config(1);
-	/*bool pippo = true;
+	bool pippo = true;
 	
 	if (pollingOld == 0x25) pippo = false;
-	
+	/*
 	while (pippo){
 		asm("nop");
 	}
-	
+	*/
 	uint32_t pippo2;
-	//framWrite(FRAM_MCU_VERSION, _build_version);				
+	
+	/*
+	while(data < 3000000)
+	{
+		XO3_WriteByte(0x30000014,data);
+		XO3_Read(0x30000014, &pippo2);
+		if(pippo2!=data)
+		{
+			DEBUG_PRINT("Error detected expected %d, read %d\n", data,pippo2);	
+		}
+		data=data+1;
+		if (data%1000==0) DEBUG_PRINT("Op num %d\n", data);	
+	}
+	*/
+		
+	/*
+	framWrite(FRAM_MCU_VERSION, _build_version);				
 	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);
 	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);
 	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);*/

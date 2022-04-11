@@ -18,7 +18,7 @@
 #include <memory.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <stdio.h>
 #include <SpiRouter.h>
 #include <atmel_start.h>
 
@@ -32,6 +32,47 @@
 #include "regfile.h"
 
 /*#define MYSPI			SPI*/
+
+
+#define NO_DEBUG_SPI
+
+#ifdef DEBUG_SPI
+char bufferOut_spi[512];
+#undef DEBUG_SPI // Undefine only for remove warning
+#define DEBUG_SPI 2 // Possible Choice: 3: Log Level - 2: Warning Level - 1: Error Level - Only #def: Status
+#endif
+
+#ifdef DEBUG_SPI
+void deb_print_spi(uint8_t debug_level = 0){
+	char * str;
+	str = const_cast<char *>(bufferOut_spi);
+	struct io_descriptor *uartDebug;
+	usart_sync_get_io_descriptor(&USART_0, &uartDebug);
+	usart_sync_enable(&USART_0);
+	switch (debug_level) {
+		case 0x1:
+		io_write(uartDebug, (uint8_t *)"d1:", (unsigned)3);
+		break;
+		case 0x2:
+		io_write(uartDebug, (uint8_t *)"d2:", (unsigned)3);
+		break;
+		case 0x3:
+		io_write(uartDebug, (uint8_t *)"d3:", (unsigned)3);
+		break;
+	}
+	io_write(uartDebug, (uint8_t *)str, (unsigned)strlen(str));
+}
+#endif
+
+
+
+
+#if defined(DEBUG_SPI)
+#define DEBUG_PRINT_SPI(...) do{sprintf(bufferOut_spi, __VA_ARGS__); deb_print_spi();} while( false )
+#else
+#define DEBUG_PRINT_SPI(...) do{ } while ( false )
+#endif
+
 
 #ifndef __cplusplus
 #define nullptr ((void*)0)
@@ -64,6 +105,8 @@ SPI_sync(
 	spi_m_sync_get_io_descriptor(&SPI_0, &io);
 	spi_m_sync_enable(&SPI_0);
 	spi_m_sync_set_mode(&SPI_0, SPI_MODE_0);
+	
+	uint16_t count_delay=0;
 	
 // 	struct spi_device device = {
 // 		
@@ -148,6 +191,7 @@ SPI_sync(
 			memcpy(rxBuffer, &rxbuf[offset+latency], length);
 		}
 		else {
+			
 			for (int i = 0; i < 8; i++) rxbuf[i] = 0xaa;
 			
 			transfer.rxbuf = rxbuf;
@@ -164,13 +208,15 @@ SPI_sync(
 			while (1){
 				risp = spi_m_sync_transfer(&SPI_0, &scoda);
 				if (rxbuf[0] == 0x0) break;
+				count_delay++;
 			}
 			
 			scoda.size  = 5;
 			
 			risp = spi_m_sync_transfer(&SPI_0, &scoda);
 			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
-			
+			if (count_delay > 2) DEBUG_PRINT_SPI("Delay Count %d\n", count_delay);
+
 			memcpy(rxBuffer, rxbuf, 4);
 		}		
 		
@@ -312,15 +358,19 @@ XO3_ReadXilinx(
   uint32_t dato=0;
   memset(txBuffer, 0, 8);
 
-  txBuffer[0] = 0x03;
+  txBuffer[0] = 0x05;
   txBuffer[1] = 0xFF & (regs >> 24);
   txBuffer[2] = 0xFF & (regs >> 16);
   txBuffer[3] = 0xFF & (regs >> 8);
   txBuffer[4] = 0xFF & (regs);
 
-  int success = SPI_sync(1, txBuffer, rxBuffer, 30); //11
+  int success = SPI_sync(1, txBuffer, rxBuffer, 10);
 
-  dato = (((rxBuffer[7] & 0xFF) << 24) | ((rxBuffer[8] & 0xFF) << 16) | ((rxBuffer[9] & 0xFF) << 8) | rxBuffer[10]);
+  dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
+
+  //int success = SPI_sync(1, txBuffer, rxBuffer, 30); //11
+
+  //dato = (((rxBuffer[7] & 0xFF) << 24) | ((rxBuffer[8] & 0xFF) << 16) | ((rxBuffer[9] & 0xFF) << 8) | rxBuffer[10]);
   //memcpy(dato, rxBuffer[6], 4);
   //dato=dato&0x0000ffff;
   *value=dato;
