@@ -97,8 +97,10 @@ bool irqExternalFPGA = false;
 
 uint8_t irqPG = 0x0;
 
-uint32_t ADT7408_temp_raw;
+uint32_t ADT7408_temp_raw=0;
 uint16_t ADT7408_temp;
+uint16_t ADT7408_temp_prev;
+
 bool ADT7408Regs[3];
 uint32_t pollingHz;
 uint32_t reg_ThresholdEnable = 0;
@@ -117,6 +119,8 @@ uint32_t InternalCounter_ADC_update = 0;
 
 uint32_t xil_sysmon_fpga0_offset, xil_sysmon_fpga1_offset;
 bool XilinxBlockNewInfo = false;
+
+uint32_t i2c_connection_error=0;
 
 /* -----------------------------------*/
 
@@ -334,7 +338,7 @@ void SKAalarmManage(){
 				if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
 				#endif
 				XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
-				DEBUG_PRINT1("-----\nADC ALARM %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
+				DEBUG_PRINT1("-----\nADC ALARM_ %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
 				TPMpowerLock = true;
 				//delay_ms(500); // ONLY FOR TEST
 			}
@@ -621,10 +625,34 @@ void TWIdataBlock(void){
 	// i2c1
    //readBoardTemp(&ADT7408_temp, &ADT7408Regs[3]); // Disabled for errors
 	status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
-	VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp_raw;
+	if(status == 0)
+	{
+		i2c_connection_error=0;
+		if (ADT7408_temp_raw&0x1000 == 0x1000)
+			ADT7408_temp=0xffff;
+		else
+			ADT7408_temp=ADT7408_temp_raw&0xfff;		
+		VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp;
+	}
+	else if (status == 2)
+	{
+		DEBUG_PRINT("I2C read failed, ACK_Error detected\n");
+		i2c_connection_error++;
+	}
+	else if (status == -3)
+	{
+			DEBUG_PRINT("I2C read failed, MCU Lock Failed\n");
+			i2c_connection_error++;
+	}
+	else
+	{		
+		DEBUG_PRINT("I2C read failed\n");
+		i2c_connection_error++;
+	}
+	
 	//XO3_WriteByte(fram_ADT7408_M_1_temp_val + fram_offset, retvalue);
 	retvalue = 0xffffffff;
-
+	
 	
 }
 
@@ -1089,11 +1117,15 @@ void taskSlow(){
 			DEBUG_PRINT1("INFO: SPI Bus revived. Comunication OK\n");
 			errorSPI = 0;
 		}
-		TWIdataBlock();
+		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
+		if(res&EN_ADC == EN_ADC)
+			TWIdataBlock();
 		exchangeDataBlock();
 		
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
 		InternalCounter_CPLD_update++;
+		if(InternalCounter_CPLD_update % 10 == 0)
+			DEBUG_PRINT("Internal Counter %d\n", InternalCounter_CPLD_update); 
 		framWrite(FRAM_MCU_COUNTER, InternalCounter_CPLD_update);
 		framRead(FRAM_ADC_MGT_AVTT, &res2);
 

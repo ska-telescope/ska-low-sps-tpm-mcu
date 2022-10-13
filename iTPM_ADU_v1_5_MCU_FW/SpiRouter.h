@@ -32,7 +32,7 @@ XO3_Write(
     void*    privateData
 );*/
 
-void
+int
 XO3_WriteByte(
     uint32_t regs,
     uint32_t value
