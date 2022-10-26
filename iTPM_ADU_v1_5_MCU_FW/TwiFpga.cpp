@@ -66,6 +66,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	uint8_t tempbyte0, tempbyte1, tempbyte2, tempbyte3;
 	uint8_t timeout = 0;
 	uint32_t res;
+	/*
 	bool i2c_ack = false;
 	XO3_WriteByte(itpm_cpld_lock_mlock0, itpm_cpld_i2c_command); // Request I2C Ownership
 	do{
@@ -82,7 +83,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 		DEBUG_PRINT_TWI("CPLD MCU Lock: I2C LOCKED Fails Timeout Occours\n");
 		return -3;
 	}
-	
+	*/
 	ICaddress = ICaddress >> 1; // Shift 8bit to 7bit address
 	
 	if (byte2write > 1) { // Chiedere ad ale di invertire le scritture

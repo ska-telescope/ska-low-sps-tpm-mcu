@@ -66,6 +66,15 @@ const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUIL
 #define ADCCOLUMNS 14
 #define TEMPS_SENSOR 3
 #define FPGA_FE_CURRENT 2
+
+
+enum i2c_control_status_t{
+	waiting_first_req=0,
+	request_received,
+	ack_send
+	};
+
+
 struct ADCstruct {
 	int ADCpin;
 	uint16_t ADCread;
@@ -119,6 +128,7 @@ uint32_t InternalCounter_ADC_update = 0;
 
 uint32_t xil_sysmon_fpga0_offset, xil_sysmon_fpga1_offset;
 bool XilinxBlockNewInfo = false;
+i2c_control_status_t i2c_ctrl_status=waiting_first_req;
 
 uint32_t i2c_connection_error=0;
 
@@ -148,6 +158,7 @@ void deb_print(uint8_t debug_level = 0){
 
 /* -----------------------------------*/
 
+
 void framRead(uint32_t fram_register, uint32_t* readback){
 	uint32_t intreadback;
 	XO3_Read(itpm_cpld_bram_cpu + fram_register, &intreadback);
@@ -157,6 +168,107 @@ void framRead(uint32_t fram_register, uint32_t* readback){
 void framWrite(uint32_t fram_register, uint32_t writedata){
 	XO3_WriteByte(itpm_cpld_bram_cpu + fram_register, writedata);
 }
+
+int copyeep_ram()
+{
+	int status;
+	uint32_t eep_add=0;
+	uint32_t fram_add=0;
+	uint32_t fram_data=0;
+	uint32_t res=0;
+	int i,k;
+	/*
+	        rd = self.board[0x40000020]
+	        self.board[0x4000003C] = rd
+	        rd = self.board[0x40000024]
+	        self.board[0x40000038] = rd
+
+	        rd = self.board[0x4000003C]
+	        if rd & 0x10000 == 0:
+	*/
+	XO3_Read(0x40000020, &res);
+	XO3_WriteByte(0x4000003c,res);
+	XO3_Read(0x40000024, &res);
+	XO3_WriteByte(0x40000038,res);
+	XO3_Read(0x40000024, &res);
+	
+	if(res &0x10000 == 0 )
+		DEBUG_PRINT("Password not accepted\n");
+	else
+		DEBUG_PRINT("Password accepted\n");
+
+	fram_add=FRAM_EEP_START;
+	for (eep_add=0;eep_add<FRAM_EEP_SIZE;eep_add=eep_add+4)
+	{
+		status = twiFpgaWrite(EEP_PHY_ADD, 1, 4,eep_add , &fram_data, i2c1);
+		if(status == 0)
+		{
+			i2c_connection_error=0;
+			
+			framWrite(fram_add,fram_data);
+			fram_data=0;
+			fram_add=fram_add+0x4;
+		}
+		else if (status == 2)
+		{
+			DEBUG_PRINT("I2C read failed, ACK_Error detected\n");
+			i2c_connection_error++;
+			return -1;
+		}
+		else if (status == -3)
+		{
+			DEBUG_PRINT("I2C read failed, MCU Lock Failed\n");
+			i2c_connection_error++;
+			return -1;
+		}
+		else
+		{
+			DEBUG_PRINT("I2C read failed\n");
+			i2c_connection_error++;
+			return -1;
+		}
+	}
+	fram_add=FRAM_EEP_START+0xF0;
+	for (eep_add=0xf0;eep_add<0x100;eep_add=eep_add+4)
+	{
+		status = twiFpgaWrite(EEP_PHY_ADD, 1, 4,eep_add , &fram_data, i2c1);
+		if(status == 0)
+		{
+			i2c_connection_error=0;
+			
+			framWrite(fram_add,fram_data);
+			fram_data=0;
+			fram_add=fram_add+0x4;
+		}
+		else if (status == 2)
+		{
+			DEBUG_PRINT("I2C read failed, ACK_Error detected\n");
+			i2c_connection_error++;
+			return -1;
+		}
+		else if (status == -3)
+		{
+			DEBUG_PRINT("I2C read failed, MCU Lock Failed\n");
+			i2c_connection_error++;
+			return -1;
+		}
+		else
+		{
+			DEBUG_PRINT("I2C read failed\n");
+			i2c_connection_error++;
+			return -1;
+		}
+	}
+	fram_add=EEPMAPPEDADD;
+	fram_data=itpm_cpld_bram_cpu+FRAM_EEP_START;
+	framWrite(fram_add,fram_data);
+	return 0;
+	
+}
+
+
+
+
 
 static __inline__ void ADCsync() __attribute__((always_inline, unused));
 static void ADCsync() {
@@ -1038,6 +1150,7 @@ void IRQinternalPGhandler(void){
 
 void StartupStuff(void){
 	uint32_t res;
+	int copyeep_ret=0;
 	
 	res = PM->RCAUSE.reg;
 	 DEBUG_PRINT("\nRESET REASON 0x%x", res);
@@ -1051,6 +1164,7 @@ void StartupStuff(void){
 	
 	DEBUG_PRINT("\nSKA iTPM 1.6 - Debug Enabled\n");
 	DEBUG_PRINT("Debug level: %d\n", (int) DEBUG);
+
 	
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xF0, &res, i2c2);
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xF0, &res, i2c3);	
@@ -1071,7 +1185,29 @@ void StartupStuff(void){
 	gpio_set_pin_level(USR_LED1, true);
 	
 	//XO3_WriteByte(itpm_cpld_regfile_enable_shadow, EnableShadowRegister);
-
+	
+	//copyeep_ram();
+	
+	
+	/*
+	DEBUG_PRINT("Load EEP in FRAM\n");
+	
+	do{
+		if (copyeep_ram() == 0)
+		{
+			DEBUG_PRINT("Load complete\n");
+			break;
+		}
+		else
+		{
+			copyeep_ret++;
+			DEBUG_PRINT("Load failed\n");
+		}
+	}while(copyeep_ret<3);
+	if (copyeep_ret == 3)
+		DEBUG_PRINT("Load EEP in FRAM Failed\n");
+	
+	*/
 	
 	SKAsystemMonitorStart();
 	
@@ -1175,6 +1311,121 @@ void WDT_Handler(void){
 	asm("nop");
 }
 
+int i2c_manager(void)
+{
+	uint32_t read_data;
+	uint32_t dataIN=0;
+	uint32_t statusIN; //0x0 ok - 0x1
+	uint8_t busyRetry = 0;
+	uint8_t tempbyte0, tempbyte1, tempbyte2, tempbyte3;
+	uint8_t timeout = 0;
+	uint32_t write_error=0;
+	uint32_t read_error=0;
+	bool nack_received=false;
+	
+	
+	if (i2c_ctrl_status==waiting_first_req)
+	{
+		framRead(I2C_REQUEST_S,&read_data);
+		if (read_data!=0)
+		{
+			DEBUG_PRINT("request_received\n");	
+			//manage I2 Password
+			timeout=0;
+			do 
+			{
+				framRead(I2C_PASSWORD_HI_S,&read_data);
+				XO3_WriteByte(itpm_cpld_i2c_password, read_data);
+				framRead(I2C_PASSWORD_LO_S,&read_data);
+				XO3_WriteByte(itpm_cpld_i2c_password_lo, read_data);
+				XO3_Read(itpm_cpld_i2c_password, &read_data);
+				framWrite(I2C_PASSWORD_HI_S,read_data);
+				DEBUG_PRINT("I2C_PWD %x\n",read_data);
+				if(read_data&0x10000==0x10000)
+					break;
+				timeout++;
+			} while (timeout < 5);
+			
+			framRead(I2C_TRANSMIT_S,&read_data);	
+			if (XO3_WriteByte(itpm_cpld_i2c_transmit, read_data) != 0)
+			{
+				//return -1;
+				write_error++;
+			}
+			
+			framRead(I2C_COMMAND_S,&read_data);
+			if (XO3_WriteByte(itpm_cpld_i2c_command, read_data) != 0)
+			{
+				//return -1;
+				write_error++;
+			}
+			for (int i = 0; i < 0xffff; i++) asm("nop");
+			if (XO3_Read(itpm_cpld_i2c_status, &statusIN)!= 0)
+			{
+				//return -1;
+				write_error++;
+			}
+			while (statusIN == 0x1 || statusIN == 0x3) {
+				busyRetry++;
+				if (busyRetry >= MAX_BUSY_RETRY)
+				{
+					DEBUG_PRINT("I2C busy or not ack\n");
+					//return (int)statusIN;
+					nack_received=true;
+				}
+				
+				if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
+				{
+					//XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+					//return -1;
+					read_error++;
+				}
+			}
+			if (write_error==0 && read_error==0 )
+			{
+				if(nack_received)
+				{
+					framWrite(I2C_STATUS_S,statusIN);
+					framWrite(I2C_RECEIVE_S,dataIN);
+					framWrite(I2C_ACNOWLEDGE_S,0x1);
+					i2c_ctrl_status=ack_send;
+					DEBUG_PRINT("I2C ACK SEND OP NAK\n");
+				}
+				else
+				{
+					if (XO3_Read(itpm_cpld_i2c_receive, &dataIN) != 0)
+					{
+						//XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+						read_error++;
+					}	
+					framWrite(I2C_STATUS_S,statusIN);
+					framWrite(I2C_RECEIVE_S,dataIN);
+					framWrite(I2C_ACNOWLEDGE_S,0x1);
+					i2c_ctrl_status=ack_send;
+					DEBUG_PRINT("I2C ACK SEND OP OK\n");
+				}
+			}
+		}
+	}
+	if(i2c_ctrl_status==ack_send)
+	{
+		framRead(I2C_ACNOWLEDGE_S,&read_data);
+		if(read_data==0)
+		{
+			DEBUG_PRINT("I2C ACK RECEIVED\n");
+			
+			XO3_WriteByte(itpm_cpld_i2c_password, 0);
+			XO3_WriteByte(itpm_cpld_i2c_password_lo, 0);
+			framWrite(I2C_PASSWORD_HI_S,0x0);
+			framWrite(I2C_PASSWORD_LO_S,0x0);
+			framWrite(I2C_REQUEST_S,0x0);
+			i2c_ctrl_status=waiting_first_req;	
+		}
+	}
+	
+}
+
+
 int main(void)
 {
 	// Cheap delay startup ~1000 ms total
@@ -1266,6 +1517,7 @@ int main(void)
 	
 	while (1) {
 		uint32_t vers;
+		i2c_manager();
 		gpio_toggle_pin_level(USR_LED1);
 
 		ADCreadSingle();
