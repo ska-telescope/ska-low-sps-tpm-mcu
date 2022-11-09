@@ -66,24 +66,26 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	uint8_t tempbyte0, tempbyte1, tempbyte2, tempbyte3;
 	uint8_t timeout = 0;
 	uint32_t res;
-	/*
+	uint32_t ticket;
+	
 	bool i2c_ack = false;
-	XO3_WriteByte(itpm_cpld_lock_mlock0, itpm_cpld_i2c_command); // Request I2C Ownership
+	XO3_Read(itpm_cpld_lock_queue_number, &ticket);
 	do{
-		XO3_Read(itpm_cpld_lock_mlock0, &res);
-		if (res == itpm_cpld_i2c_command){ // Check ownership
+		XO3_WriteByte(itpm_cpld_lock_lock_i2c, ticket); // Request I2C Ownership
+		XO3_Read(itpm_cpld_lock_lock_i2c, &res);
+		if (res == ticket){ // Check ownership
 			DEBUG_PRINT_TWI("CPLD MCU Lock: I2C LOCKED from MCU\n");
 			i2c_ack = true;
 			break;
 		}
 		else timeout++;
-	} while (timeout < 10 );
-	if (timeout == 10)
+	} while (timeout < 20 );
+	if (timeout == 20)
 	{
 		DEBUG_PRINT_TWI("CPLD MCU Lock: I2C LOCKED Fails Timeout Occours\n");
 		return -3;
 	}
-	*/
+	
 	ICaddress = ICaddress >> 1; // Shift 8bit to 7bit address
 	
 	if (byte2write > 1) { // Chiedere ad ale di invertire le scritture
@@ -103,21 +105,55 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	twi_ctrl_data += (byte2write << 8); // [23:16] byte number to write
 	twi_ctrl_data += (ICaddress); // [9:0] command - [6:0] IC address
 	
+	XO3_Read(0x40000024, &res);
+	if(res &0x10000 == 0 )
+	{
+			DEBUG_PRINT_TWI("Password not accepted\n");
+			return -2;
+	}
+
+	if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
+	{
+		XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
+		return -1;
+	}
+	while (statusIN != 0) {
+		busyRetry++;
+		if (busyRetry >= MAX_BUSY_RETRY)
+		{
+			DEBUG_PRINT_TWI("I2C busy \n");
+			XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
+			return (int)statusIN;
+		}
+		
+		if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
+		{
+			XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
+			return -1;
+		}
+	}
+	
 	
 	if (XO3_WriteByte(itpm_cpld_i2c_transmit, datatx) != 0)
 	{
-		XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+		XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	if (XO3_WriteByte(itpm_cpld_i2c_command, twi_ctrl_data) != 0)
 	{
-		XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+		XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
+	
+	
 	for (int i = 0; i < 0xffff; i++) asm("nop");
-    if (XO3_Read(itpm_cpld_i2c_status, &statusIN)!= 0)
+	//delay_ms(100);
+    
+	
+	
+	if (XO3_Read(itpm_cpld_i2c_status, &statusIN)!= 0)
 	{
-		XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+		XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	
@@ -126,19 +162,19 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 		if (busyRetry >= MAX_BUSY_RETRY) 
 		{
 			DEBUG_PRINT_TWI("I2C busy or not ack\n");
-			XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+			XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 			return (int)statusIN;
 		}
 		
 		if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
 		{
-			XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+			XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 			return -1;
 		}
 	}
 	if (XO3_Read(itpm_cpld_i2c_receive, &dataIN) != 0)
 	{
-		XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+		XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	
@@ -155,7 +191,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	}
 	
 	*datarx = dataIN;
-	XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear I2C Ownership
+	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 	return (int)statusIN;
 }
 

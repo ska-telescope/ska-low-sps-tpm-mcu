@@ -187,8 +187,28 @@ SPI_sync(
 			
 			gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS	
 			int32_t risp = spi_m_sync_transfer(&SPI_0, &transfer);
+		    
+			//wait acknowledge 
+			if (rxbuf[0] != 0x0)
+			{
+				
+				scoda.rxbuf = rxbuf;
+				scoda.txbuf = &scoda_tx;
+				scoda.size  = 1; 
+			 
+				while (1){
+					risp = spi_m_sync_transfer(&SPI_0, &scoda);
+					if (rxbuf[0] == 0x0) break;
+					else if (rxbuf[0] == 0x11)
+					{
+						gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
+						DEBUG_PRINT_SPI("SPI Timeout cmd received in write op\n");
+						return -1;
+					}
+					count_delay++;
+				}
+			}
 			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
-			
 			memcpy(rxBuffer, &rxbuf[offset+latency], length);
 		}
 		else {
@@ -212,7 +232,7 @@ SPI_sync(
 				else if (rxbuf[0] == 0x11)
 				{
 					gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
-					DEBUG_PRINT_SPI("SPI Timeout cmd received\n");
+					DEBUG_PRINT_SPI("SPI Timeout cmd received in read op\n");
 					return -1;
 				}
 				count_delay++;

@@ -808,6 +808,38 @@
 #define itpm_cpld_smap_wr_fifo_R	0x0
 #define itpm_cpld_smap_wr_fifo_D	"data to be written in Slave Serial IF"
 
+
+#define itpm_cpld_lock_queue_number  	0x60000000	//R
+#define itpm_cpld_lock_queue_number_M	0x0000FFFF
+#define itpm_cpld_lock_queue_number_R	0x0
+#define itpm_cpld_lock_queue_number_D	"Queue number"
+
+#define itpm_cpld_lock_lock_anaspi  	0x60000004	//RW
+#define itpm_cpld_lock_lock_anaspi_M	0x0000FFFF
+#define itpm_cpld_lock_lock_anaspi_R	0x0
+#define itpm_cpld_lock_lock_anaspi_D	"Lock Analog SPI"
+
+#define itpm_cpld_lock_lock_i2c  	0x60000008	//RW
+#define itpm_cpld_lock_lock_i2c_M	0x0000FFFF
+#define itpm_cpld_lock_lock_i2c_R	0x0
+#define itpm_cpld_lock_lock_i2c_D	"Lock I2C"
+
+#define itpm_cpld_lock_lock_smap  	0x6000000C	//RW
+#define itpm_cpld_lock_lock_smap_M	0x0000FFFF
+#define itpm_cpld_lock_lock_smap_R	0x0
+#define itpm_cpld_lock_lock_smap_D	"Lock Select MAP"
+
+#define itpm_cpld_lock_lock_fespi  	0x60000010	//RW
+#define itpm_cpld_lock_lock_fespi_M	0x0000FFFF
+#define itpm_cpld_lock_lock_fespi_R	0x0
+#define itpm_cpld_lock_lock_fespi_D	"Lock Front End SPI"
+
+#define itpm_cpld_lock_lock_confspi  	0x60000014	//RW
+#define itpm_cpld_lock_lock_confspi_M	0x0000FFFF
+#define itpm_cpld_lock_lock_confspi_R	0x0
+#define itpm_cpld_lock_lock_confspi_D	"Lock Config SPI"
+
+/*
 #define itpm_cpld_lock_mlock0  	0x60000000	//RW
 #define itpm_cpld_lock_mlock0_M	0xffffffff
 #define itpm_cpld_lock_mlock0_R	0xffffffff
@@ -822,6 +854,8 @@
 #define itpm_cpld_lock_mlock2_M	0xffffffff
 #define itpm_cpld_lock_mlock2_R	0xffffffff
 #define itpm_cpld_lock_mlock2_D	"SWLINK slave lock 2"
+
+*/
 
 #define itpm_cpld_fespi_serio_reg0  	0x70000000	//R
 #define itpm_cpld_fespi_serio_reg0_M	0xFFFFFFFF
