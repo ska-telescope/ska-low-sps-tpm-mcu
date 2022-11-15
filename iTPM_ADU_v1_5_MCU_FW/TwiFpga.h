@@ -15,6 +15,8 @@
 
 #define MAX_BUSY_RETRY		20
 
+#define CPLD_FW_VERSION_LOCK_CHANGE 0x22032409
+
 #define R8BIT		1
 #define R16BIT		2
 

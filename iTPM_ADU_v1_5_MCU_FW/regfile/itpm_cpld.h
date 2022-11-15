@@ -808,6 +808,13 @@
 #define itpm_cpld_smap_wr_fifo_R	0x0
 #define itpm_cpld_smap_wr_fifo_D	"data to be written in Slave Serial IF"
 
+//used for old version of FW
+#define itpm_cpld_lock_mlock0  	0x60000000	//RW
+#define itpm_cpld_lock_mlock0_M	0xffffffff
+#define itpm_cpld_lock_mlock0_R	0xffffffff
+#define itpm_cpld_lock_mlock0_D	"MCU slave lock 0"
+
+
 
 #define itpm_cpld_lock_queue_number  	0x60000000	//R
 #define itpm_cpld_lock_queue_number_M	0x0000FFFF
