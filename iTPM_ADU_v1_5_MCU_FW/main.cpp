@@ -68,7 +68,7 @@ const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUIL
 #define ADCCOLUMNS 14
 #define TEMPS_SENSOR 3
 #define FPGA_FE_CURRENT 2
-#define I2C_CONNECTION_ERR_MAX 5
+#define I2C_CONNECTION_ERR_MAX 10
 #define ETH_REG_NUM 6
 #define WDT_CPLD_REG 0xf //150ms * 4 = 600 ms
 
@@ -102,13 +102,16 @@ bool anaNotReady = true;
 /* ----- GLOBAL FLAGS -------*/
 volatile bool spi_timeout = false;
 
+volatile bool irqTimerSlow = false;
+volatile bool irqTimerFast = false;
+volatile bool irqExternalFPGA = false;
+volatile bool check_pg_en	= false;
+
+
 /* --------- VAR -------------------- */
 
 static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC 2^16
 
-bool irqTimerSlow = false;
-bool irqTimerFast = false;
-bool irqExternalFPGA = false;
 
 
 uint8_t irqPG = 0x0;
@@ -140,6 +143,9 @@ volatile i2c_control_status_t i2c_ctrl_status=waiting_first_req;
 uint32_t i2c_connection_error=0;
 uint32_t cpld_fw_vers=0;
 uint32_t mcu_heartbit=0;
+uint32_t pgood_reg=0;
+uint32_t ena_reg=0;
+
 
 
 /* -----------------------------------*/
@@ -201,6 +207,7 @@ void framWrite(uint32_t fram_register, uint32_t writedata){
 	XO3_WriteByte(itpm_cpld_bram_cpu + fram_register, writedata);
 }
 
+/*
 int copyeep_ram()
 {
 	int status;
@@ -209,15 +216,7 @@ int copyeep_ram()
 	uint32_t fram_data=0;
 	uint32_t res=0;
 	int i,k;
-	/*
-	        rd = self.board[0x40000020]
-	        self.board[0x4000003C] = rd
-	        rd = self.board[0x40000024]
-	        self.board[0x40000038] = rd
 
-	        rd = self.board[0x4000003C]
-	        if rd & 0x10000 == 0:
-	*/
 	XO3_Read(0x40000020, &res);
 	XO3_WriteByte(0x4000003c,res);
 	XO3_Read(0x40000024, &res);
@@ -296,7 +295,7 @@ int copyeep_ram()
 	framWrite(fram_add,fram_data);
 	return 0;
 	
-}
+}*/
 
 void smap_lock(bool *xil_ack, uint32_t *retry)
 {
@@ -387,13 +386,13 @@ void tpm_wd_update()
 int set_i2c_pwd(void)
 {
 		uint32_t readval=0;
-		XO3_Read(0x40000020, &readval);
-		XO3_WriteByte(0x4000003c,readval);
-		XO3_Read(0x40000024, &readval);
-		XO3_WriteByte(0x40000038,readval);
-		XO3_Read(0x40000024, &readval);
+		XO3_Read(itpm_cpld_i2c_mac_hi, &readval);
+		XO3_WriteByte(itpm_cpld_i2c_password,readval);
+		XO3_Read(itpm_cpld_i2c_mac_lo, &readval);
+		XO3_WriteByte(itpm_cpld_i2c_password_lo,readval);
+		XO3_Read(itpm_cpld_i2c_password, &readval);
 		
-		if(readval & 0x10000 == 0 )
+		if((readval & 0x10000) == 0 )
 		{
 			DEBUG_PRINT("Password not accepted: %x\n",readval);
 			return -1;	
@@ -446,6 +445,7 @@ int init_eth_regs_from_eep()
 			}
 			else
 			{	
+				DEBUG_PRINT("I2C Operation Error, status = %x \n",status);
 				i2c_connection_error++;
 				return -1;								
 			} 	
@@ -506,6 +506,64 @@ void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VG
 	
 	DEBUG_PRINT("Powered devices ADC %d - Frontend %d - FPGA %d - SYSR %d - VGA %d\n", ADCpwr, FRONTENDpwr, FPGApwr, SYSRpwr, VGApwr);
 }
+
+void GetTPMENABLEState(uint32_t *tpm_enablereg_state)
+{
+	uint32_t readreg=0;
+	XO3_Read(itpm_cpld_regfile_enable, &readreg);
+	*tpm_enablereg_state=readreg;
+	ena_reg=readreg;
+}
+
+void CheckPowerGoodandEnable()
+{
+	uint32_t enable_reg=0;
+	uint32_t pgoodreg=0;
+	uint32_t pgood_err_reg=0;
+	uint32_t error=0;
+	GetTPMENABLEState(&enable_reg);
+	framRead(FRAM_POWERGOOD,&pgoodreg);
+	framRead(FRAM_POWERGOOD_ERR,&pgood_err_reg);
+	DEBUG_PRINT("PGOOD CHECK\n");
+	if(enable_reg&EN_ADC == EN_ADC)
+		if(pgoodreg&PG_ADC_irq != PG_ADC_irq)
+		{
+			error++;
+			pgood_err_reg=pgood_err_reg|PG_ADC_irq;
+			DEBUG_PRINT("ERROR: ADC is enabled but pgood of ADC PS is Low\n");
+		}
+	if(enable_reg&EN_FE == EN_FE)
+		if(pgoodreg&PG_FE_irq != PG_FE_irq)
+		{
+			error++;
+			pgood_err_reg=pgood_err_reg|PG_FE_irq;
+			DEBUG_PRINT("ERROR: FE is enabled but pgood of FE PS is Low\n");
+		}	
+	if(enable_reg&EN_FPGA == EN_FPGA)
+		if(pgoodreg&PG_FPGA_irq != PG_FPGA_irq)
+		{
+			error++;
+			pgood_err_reg=pgood_err_reg|PG_FPGA_irq;
+			DEBUG_PRINT("ERROR: FPGA is enabled but pgood of FPGA PS is Low\n");
+		}
+	if(enable_reg&EN_FPGA == EN_FPGA)
+		if(pgoodreg&PG_FPGA_irq != PG_FPGA_irq)
+		{
+			error++;
+			pgood_err_reg=pgood_err_reg|PG_FPGA_irq;
+			DEBUG_PRINT("ERROR: FPGA is enabled but pgood of FPGA PS is Low\n");
+		}
+	if(pgoodreg&(PG_MAN_irq | PG_AVDD_irq) != (PG_MAN_irq | PG_AVDD_irq))
+	{
+		error++;
+		pgood_err_reg=pgood_err_reg|(PG_MAN_irq | PG_AVDD_irq);
+		DEBUG_PRINT("ERROR: Board is powered on but pgood of MAN and AVDD PS are Low\n");
+	}
+	check_pg_en=false;
+	// TO DO: add powering off of PS and setting global_alarm_status_register
+		
+}
+
 
 
 /**
@@ -676,7 +734,7 @@ void SKAalarmManage(){
 			{
 				if (i2c_connection_error > I2C_CONNECTION_ERR_MAX)
 				{
-					//DEBUG_PRINT("I2C Unreachable\n");
+					DEBUG_PRINT("I2C Unreachable\n");
 					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 					#ifndef DISABLE_AUTO_SHUTDOWN
 					if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
@@ -685,7 +743,7 @@ void SKAalarmManage(){
 					//DEBUG_PRINT1("-----\nERROR I2C Unreachable for %d times, powered off same supplies\n-----\n", I2C_CONNECTION_ERR_MAX");
 					framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
 					TPMpowerLock = true;	
-				} 
+				}
 				else if ((VoltagesTemps[i].ADCread&0x8000 != 0x8000) && (VoltagesTemps[i].ADCread&0xfff > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled))
 				{
 					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
@@ -904,7 +962,8 @@ void exchangeDataBlock(){
 	framWrite(FRAM_ADC_MGT_AVTT,			VoltagesTemps[12].ADCread);	
 	framWrite(FRAM_ADC_INTERNAL_MCU_TEMP,	SAMinternalTempConv(uint32_t(VoltagesTemps[13].ADCread)));
 	
-	framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
+	//framWrite(FRAM_BOARD_TEMP, ADT7408_temp_raw);
+	framWrite(FRAM_BOARD_TEMP, ADT7408_temp);
 	
 	framWrite(FRAM_MCU_COMPLETE_ADC_COUNTER, InternalCounter_ADC_update);	
 	
@@ -986,15 +1045,19 @@ void ADCstart() { // Single read, much FASTER
 void TWIdataBlock(void){
 	int status;
 	uint32_t retvalue = 0xffffffff;
-
+	DEBUG_PRINT3("TWI Data Block\n");
 	// i2c1
    //readBoardTemp(&ADT7408_temp, &ADT7408Regs[3]); // Disabled for errors
+	set_i2c_pwd();
 	status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
 	if(status == 0)
 	{
 		i2c_connection_error=0;
-		if (ADT7408_temp_raw&0x1000 == 0x1000)
+		if ((ADT7408_temp_raw & 0x1000) == 0x1000)
+		{
+			DEBUG_PRINT("TWI Data Read neg Val %x\n",ADT7408_temp_raw);
 			ADT7408_temp=0x8000;
+		}
 		else
 			ADT7408_temp=ADT7408_temp_raw&0xfff;		
 		VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp;
@@ -1002,6 +1065,8 @@ void TWIdataBlock(void){
 	else if (status == 2)
 	{
 		DEBUG_PRINT("I2C read failed, ACK_Error detected\n");
+		XO3_Read(itpm_cpld_i2c_password,&retvalue);
+		DEBUG_PRINT("I2C password high %x \n",retvalue);
 		i2c_connection_error++;
 		//VoltagesTemps[BOARDTEMP].ADCread = (ADT7408_temp | 0x8000);
 	}
@@ -1392,7 +1457,10 @@ void IRQinternalPGhandler(void){
 	
 	DEBUG_PRINT("IRQ PowerGood status changed - 0x%x\n", powergood_register);
 	
+	pgood_reg=powergood_register;
 	irqPG = 0;
+	if (check_pg_en == false)
+		check_pg_en=true;
 }
 
 void StartupStuff(void){
@@ -1400,6 +1468,9 @@ void StartupStuff(void){
 	int copyeep_ret=0;
 	int eth_init_reply=0;
 	int eth_init_status=0;
+	XO3_Read(itpm_cpld_regfile_date_code, &cpld_fw_vers);
+		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
 	
 	res = PM->RCAUSE.reg;
 	 DEBUG_PRINT("\nRESET REASON 0x%x", res);
@@ -1412,7 +1483,9 @@ void StartupStuff(void){
 	//delay_ms(100);
 
 	XO3_Read(itpm_cpld_regfile_date_code, &cpld_fw_vers);
-	
+	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
+
 	if (cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 	{
 		DEBUG_PRINT("Init CPLD ETH Regs\n");
@@ -1432,6 +1505,8 @@ void StartupStuff(void){
 		else
 			DEBUG_PRINT("Init CPLD ETH Regs complete, reply=%d\n",eth_init_reply);	
 	}
+	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
 	DEBUG_PRINT("\nSKA iTPM 1.6 - Debug Enabled\n");
 	DEBUG_PRINT("Debug level: %d\n", (int) DEBUG);
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xF0, &res, i2c2);
@@ -1453,11 +1528,24 @@ void StartupStuff(void){
 	framWrite(I2C_PASSWORD_LO_S,0x0);
 	framWrite(I2C_REQUEST_S,0x0);
 	
+	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
+
+	
+	CheckPowerGoodandEnable();
+	
+	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
 	
 	SKAsystemMonitorStart();
 	
+	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
+	
 	StartupLoadSettings();
 	
+	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
 	// Interrupt Enable
 	XO3_WriteByte(itpm_cpld_intc_mask, (itpm_cpld_intc_mask_M - ENABLE_UPDATE_int - FRAM_UPDATE_int));
 	XO3_WriteByte(itpm_cpld_intc_ack, MASK_default_int);	
@@ -1470,7 +1558,8 @@ void StartupStuff(void){
 	
 	XO3_WriteByte(itpm_cpld_regfile_safety_override, 0x0);
 	
-	
+	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		tpm_wd_update();
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c2);
 	twiFpgaWrite(IOEXPANDER, 1, 2, 0xFE, &res, i2c3);
 	
@@ -1501,6 +1590,14 @@ void taskSlow(){
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
 		if(res&EN_ADC == EN_ADC)
 			TWIdataBlock();
+		else{
+			framRead(FRAM_BOARD_ALARM, &res);
+			if(res!=0)
+			{	
+				ADT7408_temp=0x4000 | (0x0fff&ADT7408_temp); 
+				VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp;
+			}
+		}
 		exchangeDataBlock();
 		
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
@@ -1581,7 +1678,10 @@ int i2c_manager(void)
 		framRead(I2C_REQUEST_S,&read_data);
 		if (read_data!=0)
 		{
-			DEBUG_PRINT("request_received\n");	
+			framRead(I2C_REQUEST_S,&read_data);
+			if (read_data==0)
+				return 0;
+			DEBUG_PRINT("request_received: %x \n",read_data);	
 			//manage I2 Password
 			timeout=0;
 			do 
@@ -1601,7 +1701,11 @@ int i2c_manager(void)
 				timeout++;
 			} while (timeout < 20);
 			if (timeout==20)
+			{
+				DEBUG_PRINT("I2C Password not accepted\n");	
 				return -1;
+			}
+				
 			framRead(I2C_TRANSMIT_S,&read_data);	
 			if (XO3_WriteByte(itpm_cpld_i2c_transmit, read_data) != 0)
 			{
@@ -1680,6 +1784,7 @@ int i2c_manager(void)
 			i2c_ctrl_status=waiting_first_req;		
 		}
 	}
+	return 0;
 }
 
 void i2c_manager_cb(const struct timer_task *const timer_task)
@@ -1706,7 +1811,7 @@ int main(void)
 		asm("nop");
 	}
 	*/
-	uint32_t pippo2;
+	uint32_t pippo2=0;
 
 	/*
 	uint32_t res;
@@ -1757,15 +1862,14 @@ int main(void)
 	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);
 	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);*/
 	
-
+	//XO3_Read(itpm_cpld_regfile_wdt_sem, &pippo2);
+	//DEBUG_PRINT("WD SEM REG VAL 0x%x\n",pippo2);
 	
+	//XO3_Read(itpm_cpld_regfile_wdt_mcu, &pippo2);
+	//DEBUG_PRINT("WD REG VAL 0x%x\n",pippo2);
+	//tpm_wd_update();
 	StartupStuff();
 
-	
-	//XO3_Read(itpm_cpld_regfile_date_code, &cpld_fw_vers);
-	
-	
-	
 	uint32_t mtime, xil;
 	uint32_t xil_done = 0xfeffffff;
 
@@ -1805,8 +1909,9 @@ int main(void)
 	DEBUG_PRINT("Default Polling Time set to %x\n", pollingOld);	
 	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 	{	
+		//tpm_wd_update();
 		tpm_wd_init(WDT_CPLD_REG);
-		tpm_wd_enable(true);
+		tpm_wd_update();
 	}
 	while (1) {
 		uint32_t i2creg;
@@ -1830,6 +1935,7 @@ int main(void)
 		if (irqExternalFPGA) IRQinternalCPLDhandler();
 		if (irqTimerSlow) taskSlow();
 		if (irqPG > 0) IRQinternalPGhandler();
+		if (check_pg_en) CheckPowerGoodandEnable();
 		
 	}
 }

@@ -34,10 +34,11 @@
 #define FRAM_BOARD_STATUS					0x000000E0 //RW - 32 bit
 #define FRAM_BOARD_ALARM					0x000000E4 //RW - 32 bit 
 #define FRAM_BOARD_WARNING					0x000000E8 //RW - 32 bit
-#define FRAM_WRN_ERR_VALUE					0x000000EC //RW - 32 bit
-#define FRAM_ALM_ERR_VALUE					0x000000F0 //RW - 32 bit
+#define FRAM_ALM_ERR_VALUE					0x000000EC //RW - 32 bit
+#define FRAM_WRN_ERR_VALUE					0x000000F0 //RW - 32 bit
 
 
+#define FRAM_POWERGOOD_ERR					0x000000F8 //RW	- 32 bit
 #define FRAM_POWERGOOD						0x000000FC //RW	- 32 bit
 #define FRAM_ADC_SW_AVDD1					0x00000100 //RW - 16 bit
 #define FRAM_ADC_SW_AVDD2					0x00000104 //RW - 16 bit
@@ -104,7 +105,7 @@
 
 
 		
-#define EEPMAPPEDADD						0x000002C8
+//#define EEPMAPPEDADD						0x000002C8
 
 #define I2C_COMMAND_S						0x00000270
 #define I2C_TRANSMIT_S						0x00000274

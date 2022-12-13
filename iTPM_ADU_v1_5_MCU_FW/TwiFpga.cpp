@@ -82,7 +82,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 			XO3_WriteByte(itpm_cpld_lock_lock_i2c, ticket); // Request I2C Ownership
 			XO3_Read(itpm_cpld_lock_lock_i2c, &res);
 			if (res == ticket){ // Check ownership
-				DEBUG_PRINT_TWI("CPLD MCU Lock: I2C LOCKED from MCU\n");
+				DEBUG_PRINT_TWI("CPLD MCU Lock: I2C LOCKED OK from MCU\n");
 				i2c_ack = true;
 				break;
 			}
@@ -114,12 +114,12 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	twi_ctrl_data += (ICaddress); // [9:0] command - [6:0] IC address
 	
 	//check that passwd isn't changed
-	XO3_Read(0x40000024, &res); 
-	if(res &0x10000 == 0 )
-	{
-			DEBUG_PRINT_TWI("Password not accepted\n");
-			return -2;
-	}
+	//XO3_Read(0x40000024, &res); 
+	//if(res &0x10000 == 0 )
+	//{
+	//		DEBUG_PRINT_TWI("Password not accepted\n");
+	//		return -2;
+	//}
 
 	//check that I2C isn't BUSY
 	if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
@@ -128,7 +128,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 			XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
-	while (statusIN != 0) {
+	while (statusIN & 0x1 != 0) {
 		busyRetry++;
 		if (busyRetry >= MAX_BUSY_RETRY)
 		{
