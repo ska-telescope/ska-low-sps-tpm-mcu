@@ -68,7 +68,7 @@ const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUIL
 #define ADCCOLUMNS 14
 #define TEMPS_SENSOR 3
 #define FPGA_FE_CURRENT 2
-#define I2C_CONNECTION_ERR_MAX 10
+#define I2C_CONNECTION_ERR_MAX 25
 #define ETH_REG_NUM 6
 #define WDT_CPLD_REG 0xf //150ms * 4 = 600 ms
 
@@ -739,9 +739,9 @@ void SKAalarmManage(){
 					#ifndef DISABLE_AUTO_SHUTDOWN
 					if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
 					#endif
-					XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
+					XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,0x30000,16,0x2); // Write bit on itpm_cpld_regfile_global_status
 					//DEBUG_PRINT1("-----\nERROR I2C Unreachable for %d times, powered off same supplies\n-----\n", I2C_CONNECTION_ERR_MAX");
-					framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
+					framWrite(FRAM_I2C_UNREACH_ERR,i2c_connection_error);
 					TPMpowerLock = true;	
 				}
 				else if ((VoltagesTemps[i].ADCread&0x8000 != 0x8000) && (VoltagesTemps[i].ADCread&0xfff > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled))
@@ -1687,15 +1687,15 @@ int i2c_manager(void)
 			do 
 			{
 				framRead(I2C_PASSWORD_HI_S,&pwd_h);
-				DEBUG_PRINT("I2C_PWD_HI_S %x\n",pwd_h);
+				DEBUG_PRINT3("I2C_PWD_HI_S %x\n",pwd_h);
 				XO3_WriteByte(itpm_cpld_i2c_password, pwd_h);
 				framRead(I2C_PASSWORD_LO_S,&pwd_l);
-				DEBUG_PRINT("I2C_PWD_LO_S %x\n",pwd_l);
+				DEBUG_PRINT3("I2C_PWD_LO_S %x\n",pwd_l);
 				XO3_WriteByte(itpm_cpld_i2c_password_lo, pwd_l);
 				//delay_us(1);
 				XO3_Read(itpm_cpld_i2c_password, &read_data);
 				framWrite(I2C_PASSWORD_HI_S,read_data);
-				DEBUG_PRINT("I2C_PWD %x\n",read_data);
+				DEBUG_PRINT3("I2C_PWD %x\n",read_data);
 				if((read_data&0x10000)==0x10000)
 					break;
 				timeout++;

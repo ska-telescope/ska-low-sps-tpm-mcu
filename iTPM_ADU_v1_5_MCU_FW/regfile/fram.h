@@ -36,6 +36,7 @@
 #define FRAM_BOARD_WARNING					0x000000E8 //RW - 32 bit
 #define FRAM_ALM_ERR_VALUE					0x000000EC //RW - 32 bit
 #define FRAM_WRN_ERR_VALUE					0x000000F0 //RW - 32 bit
+#define FRAM_I2C_UNREACH_ERR				0x000000F4 //RW - 32 bit
 
 
 #define FRAM_POWERGOOD_ERR					0x000000F8 //RW	- 32 bit
