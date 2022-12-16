@@ -438,7 +438,16 @@ int init_eth_regs_from_eep()
 			{
 				//DEBUG_PRINT("EEP Read data %x \n",eep_data);
 				i2c_connection_error=0;
-				if(cpld_adds[i]==itpm_cpld_i2c_ip && eep_data!=0xffffffff)
+				if(cpld_adds[i]==itpm_cpld_i2c_ip)
+				{  
+					if (eep_data!=0xffffffff)
+						XO3_WriteByte((uint32_t)cpld_adds[i],eep_data);
+				}
+				else if(cpld_adds[i]=itpm_cpld_i2c_key)
+				{
+					XO3_WriteByte((uint32_t)cpld_adds[i],eep_data>>8);
+				}
+				else
 					XO3_WriteByte((uint32_t)cpld_adds[i],eep_data);
 				DEBUG_PRINT("Write at 0x%x EEP Read data %x  at EEPadd 0x%x \n",(uint32_t)cpld_adds[i],eep_data, eep_add);
 				eep_add=eep_add+4;
@@ -734,15 +743,24 @@ void SKAalarmManage(){
 			{
 				if (i2c_connection_error > I2C_CONNECTION_ERR_MAX)
 				{
-					DEBUG_PRINT("I2C Unreachable\n");
-					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
-					#ifndef DISABLE_AUTO_SHUTDOWN
-					if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
-					#endif
-					XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,0x30000,16,0x2); // Write bit on itpm_cpld_regfile_global_status
-					//DEBUG_PRINT1("-----\nERROR I2C Unreachable for %d times, powered off same supplies\n-----\n", I2C_CONNECTION_ERR_MAX");
-					framWrite(FRAM_I2C_UNREACH_ERR,i2c_connection_error);
-					TPMpowerLock = true;	
+					set_i2c_pwd();
+					int status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
+					if(status == 0)
+					{
+						i2c_connection_error=0;
+					}
+					else
+					{
+						DEBUG_PRINT("I2C Unreachable\n");
+						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
+						#ifndef DISABLE_AUTO_SHUTDOWN
+						if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
+						#endif
+						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,0x30000,16,0x2); // Write bit on itpm_cpld_regfile_global_status
+						//DEBUG_PRINT1("-----\nERROR I2C Unreachable for %d times, powered off same supplies\n-----\n", I2C_CONNECTION_ERR_MAX");
+						framWrite(FRAM_I2C_UNREACH_ERR,i2c_connection_error);
+						TPMpowerLock = true;
+					}
 				}
 				else if ((VoltagesTemps[i].ADCread&0x8000 != 0x8000) && (VoltagesTemps[i].ADCread&0xfff > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled))
 				{

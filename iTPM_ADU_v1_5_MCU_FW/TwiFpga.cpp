@@ -75,6 +75,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	XO3_Read(itpm_cpld_regfile_date_code, &fwver);
 	
 	//DEBUG_PRINT_TWI("TWI: CPLD_FW_VER 0x%x\n",fwver);
+	/*
 	if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
 	{
 		XO3_Read(itpm_cpld_lock_queue_number, &ticket);
@@ -93,7 +94,7 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 			DEBUG_PRINT_TWI("CPLD MCU Lock: I2C LOCKED Fails Timeout Occours\n");
 			return -3;
 		}
-	}
+	}*/
 	ICaddress = ICaddress >> 1; // Shift 8bit to 7bit address
 	
 	if (byte2write > 1) { // Chiedere ad ale di invertire le scritture
