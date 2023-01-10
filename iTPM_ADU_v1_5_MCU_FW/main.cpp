@@ -72,8 +72,34 @@ const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUIL
 #define ETH_REG_NUM 6
 #define WDT_CPLD_REG 0xf //150ms * 4 = 600 ms
 
-
-
+/* EXECUTION STEP DEFINES */
+enum mcu_exec_steps_t{
+	post_internal_periph_init=1,
+	pre_startup_stuff=2,
+	startup_stuff=3,
+	eth_reg_init=4,
+	checkpowergood=5,
+	systemmonitorstart=6,
+	startuploadsettings=7,
+	post_startup_stuff=8,
+	pre_main_loop=9,
+	i2c_manage=10,
+	adcreadsingle=11,
+	alarmmanage=12,
+	irqinternalcpldhandler=13,
+	taskslow=14,
+	irqinternalpghandler=15,
+	twidatablock=16,
+	exchangedatablock=17,
+	exchangedatablockxilinx=18,
+	smaplock=19,
+	smapunlock=20,
+	exchangedatablockxilinx2=21,
+	exchangedatablockxilinx3=22,
+	exchangedatablockxilinx4=23,
+	exchangedatablockxilinx5=24,
+	exchangedatablockxilinx6=25
+	};
 
 enum i2c_control_status_t{
 	waiting_first_req=0,
@@ -139,6 +165,7 @@ uint32_t InternalCounter_ADC_update = 0;
 uint32_t xil_sysmon_fpga0_offset, xil_sysmon_fpga1_offset;
 bool XilinxBlockNewInfo = false;
 volatile i2c_control_status_t i2c_ctrl_status=waiting_first_req;
+volatile mcu_exec_steps_t mcu_exec_step=post_internal_periph_init; 
 
 uint32_t i2c_connection_error=0;
 uint32_t cpld_fw_vers=0;
@@ -303,6 +330,8 @@ void smap_lock(bool *xil_ack, uint32_t *retry)
 	uint32_t received_d=0;
 	uint32_t ticket=0;
 	uint32_t retry_num=0;
+	mcu_exec_step=smaplock;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	if(cpld_fw_vers > CPLD_FW_VERSION_LOCK_CHANGE )
 	{	
 		tpm_wd_update();
@@ -340,6 +369,8 @@ void smap_lock(bool *xil_ack, uint32_t *retry)
 
 void smap_unlock()
 {
+		mcu_exec_step=smapunlock;
+		framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 		if(cpld_fw_vers > CPLD_FW_VERSION_LOCK_CHANGE )
 			XO3_WriteByte(itpm_cpld_lock_lock_smap, 0x0); // Clear Xilinx Bus Ownership
 		else
@@ -423,6 +454,8 @@ int init_eth_regs_from_eep()
 		uint32_t retry_op=0;
 		uint32_t cpld_adds[ETH_REG_NUM] = {itpm_cpld_i2c_ip, itpm_cpld_i2c_netmask, itpm_cpld_i2c_gateway,itpm_cpld_i2c_key, itpm_cpld_i2c_mac_hi,itpm_cpld_i2c_mac_lo};
 		uint32_t mac_s[2]={0,0};
+		mcu_exec_step=eth_reg_init;
+		framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 		pw_acc=set_i2c_pwd();		
 		if (pw_acc != 0)
 			DEBUG_PRINT("Password not accepted\n");
@@ -530,6 +563,9 @@ void CheckPowerGoodandEnable()
 	uint32_t pgoodreg=0;
 	uint32_t pgood_err_reg=0;
 	uint32_t error=0;
+	mcu_exec_step=checkpowergood;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	
 	GetTPMENABLEState(&enable_reg);
 	framRead(FRAM_POWERGOOD,&pgoodreg);
 	framRead(FRAM_POWERGOOD_ERR,&pgood_err_reg);
@@ -695,6 +731,9 @@ void SKAalarmUpdate(void){
 }
 
 void SKAalarmManage(){
+	mcu_exec_step=alarmmanage;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	
 	/// -------------- ADC -----------------
 	if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
@@ -842,7 +881,8 @@ int32_t SAMinternalTempConv(uint32_t raw) {
 
 void exchangeDataBlockXilinx(){
 	//#define XILINX_DEBUG_TEXT
-	
+	mcu_exec_step=exchangedatablockxilinx;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	if (TPMoverrideAutoShutdown) return;
 	
 	uint32_t timeout = 0;
@@ -872,16 +912,19 @@ void exchangeDataBlockXilinx(){
 		uint32_t xil;
 		uint32_t xil_done = 0xfffffff;
 		uint32_t xil_init = 0xfffffff;
+		mcu_exec_step=exchangedatablockxilinx2;
+		framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 		XO3_Read(itpm_cpld_regfile_xilinx, &xil);
 		XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
-		XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_init_M, itpm_cpld_regfile_xilinx_init_B,&xil_init);
-			
+		XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_init_M, itpm_cpld_regfile_xilinx_init_B,&xil_init);	
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
 		//DEBUG_PRINT2("Xilinx Done - %x - Xilinx Init %x - Enable Xilinx - %x\n", xil_done, xil_init, res);
 		uint32_t res2;
 		if (res & EN_FPGA) { // EnableShadow Reg
 			if (((xil_done == 1) && (xil_init == 1)) || ((xil_done == 3) && (xil_init == 3))){
 				if (timer > 4){
+					mcu_exec_step=exchangedatablockxilinx3;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					// Xilinx System Monitor load base address from CPLD
 					XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
 					// Check version
@@ -906,6 +949,8 @@ void exchangeDataBlockXilinx(){
 #endif
 					}
 				if(offset_read0){
+					mcu_exec_step=exchangedatablockxilinx4;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					XilinxBlockNewInfo = true;
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
 					framWrite(FRAM_FPGA0_FE_CURRENT, res);
@@ -920,6 +965,8 @@ void exchangeDataBlockXilinx(){
 			}
 			if (((xil_done == 2) && (xil_init == 2)) || ((xil_done == 3) && (xil_init == 3))){
 				if (timer > 5){
+					mcu_exec_step=exchangedatablockxilinx5;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					// Xilinx System Monitor load base address from CPLD
 					XO3_ReadXilinx(XIL_SYSMON_FPGA1_OFFSET, &xil_sysmon_fpga1_offset);
 					// Check version
@@ -944,6 +991,8 @@ void exchangeDataBlockXilinx(){
 #endif
 					}
 				if (offset_read1){
+					mcu_exec_step=exchangedatablockxilinx6;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					XilinxBlockNewInfo = true;
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA1_FE_CURRENT_OFF+itpm_cpld_wb_c2c1), &res);
 					framWrite(FRAM_FPGA1_FE_CURRENT, res);
@@ -964,7 +1013,8 @@ void exchangeDataBlockXilinx(){
 
 void exchangeDataBlock(){
 	uint32_t res = 0x0;
-	
+	mcu_exec_step=exchangedatablock;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	framWrite(FRAM_ADC_SW_AVDD1,			VoltagesTemps[0].ADCread);
 	framWrite(FRAM_ADC_SW_AVDD2,			VoltagesTemps[1].ADCread);
 	framWrite(FRAM_ADC_AVDD3,				VoltagesTemps[2].ADCread);
@@ -1005,6 +1055,8 @@ void exchangeDataBlock(){
 }
 
 void ADCreadSingle() { // Single read, much FASTER
+	mcu_exec_step=adcreadsingle;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	if (ADC->INTFLAG.bit.RESRDY == 1){
 		//uint32_t valueRead = ADC->RESULT.reg;
 		//adcArrgh[1][anaReadPos] = ADC->RESULT.reg; // Save ADC read to the array
@@ -1063,6 +1115,8 @@ void ADCstart() { // Single read, much FASTER
 void TWIdataBlock(void){
 	int status;
 	uint32_t retvalue = 0xffffffff;
+	mcu_exec_step=twidatablock;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	DEBUG_PRINT3("TWI Data Block\n");
 	// i2c1
    //readBoardTemp(&ADT7408_temp, &ADT7408Regs[3]); // Disabled for errors
@@ -1108,6 +1162,8 @@ void TWIdataBlock(void){
 }
 
 void StartupLoadSettings(void){
+	mcu_exec_step=startuploadsettings;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	DEBUG_PRINT("Push Settings to CPLD\n");
 	
 	framWrite(FRAM_MCU_POOLING_INTERVAL, DEFAULT_POLLING_INTERVAL);
@@ -1159,6 +1215,10 @@ void StartupLoadSettings(void){
 }
 
 void SKAsystemMonitorStart(){
+	
+	mcu_exec_step=systemmonitorstart;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	
 	// Create Struct
 	
 	DEBUG_PRINT("Load Voltages and Temperature Settings\n");
@@ -1442,6 +1502,9 @@ static void IRQpgADC(void){
 void IRQinternalCPLDhandler(void){
 		uint32_t irq_status, irq_mask, res;
 		
+		mcu_exec_step=irqinternalcpldhandler;
+		framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+		
 		framRead(FRAM_MCU_VERSION, &res);		
 		if (res != _build_version){
 			DEBUG_PRINT1("CRITICAL ERROR: IRQ NOT HANDLED, no SPI bus communication. Expected %x read %x\n", _build_version, res);
@@ -1464,7 +1527,8 @@ void IRQinternalCPLDhandler(void){
 
 void IRQinternalPGhandler(void){
 	uint32_t powergood_register = 0;
-	
+	mcu_exec_step=irqinternalpghandler;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	if(gpio_get_pin_level(PG_FPGA)) powergood_register += PG_FPGA_irq;
 	if(gpio_get_pin_level(PG_FE  )) powergood_register += PG_FE_irq;
 	if(gpio_get_pin_level(PG_AVDD)) powergood_register += PG_AVDD_irq;
@@ -1489,7 +1553,8 @@ void StartupStuff(void){
 	XO3_Read(itpm_cpld_regfile_date_code, &cpld_fw_vers);
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		tpm_wd_update();
-	
+	mcu_exec_step=startup_stuff;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	res = PM->RCAUSE.reg;
 	 DEBUG_PRINT("\nRESET REASON 0x%x", res);
 	if (PM->RCAUSE.bit.POR) { DEBUG_PRINT(" - Power On Reset\n", res); }
@@ -1584,7 +1649,6 @@ void StartupStuff(void){
 	framWrite(FRAM_MCU_COUNTER, InternalCounter_CPLD_update);
 	framWrite(FRAM_MCU_COUNTER, InternalCounter_ADC_update);
 	framWrite(FRAM_MCU_BOOTLOADER_COMMANDS, 0xFFFFFFFF);
-	
 	DEBUG_PRINT("Startup Done\n");	
 }
 
@@ -1597,6 +1661,10 @@ static void IRQtimerSlow(const struct timer_task *const timer_task){
 void taskSlow(){
 	static uint8_t errorSPI = 0;
 	uint32_t res, res2;
+	mcu_exec_step=taskslow;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	
+	
 	gpio_toggle_pin_level(USR_LED0);
 	
 	framRead(FRAM_MCU_VERSION, &res);
@@ -1690,6 +1758,8 @@ int i2c_manager(void)
 	uint32_t read_error=0;
 	bool nack_received=false;
 	
+	mcu_exec_step=i2c_manage;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	
 	if (i2c_ctrl_status==waiting_first_req)
 	{
@@ -1818,12 +1888,13 @@ int main(void)
 	
 	/* Initializes MCU, drivers and middleware */
 	atmel_start_init();
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	uint32_t data=0;
 	
 	//SysTick_Config(1);
 	bool pippo = true;
 	
-	if (pollingOld == 0x25) pippo = false;
+	//if (pollingOld == 0x25) pippo = false;
 	/*
 	while (pippo){
 		asm("nop");
@@ -1886,7 +1957,12 @@ int main(void)
 	//XO3_Read(itpm_cpld_regfile_wdt_mcu, &pippo2);
 	//DEBUG_PRINT("WD REG VAL 0x%x\n",pippo2);
 	//tpm_wd_update();
+	mcu_exec_step=pre_startup_stuff;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	StartupStuff();
+	mcu_exec_step=post_startup_stuff;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+
 
 	uint32_t mtime, xil;
 	uint32_t xil_done = 0xfeffffff;
@@ -1931,6 +2007,8 @@ int main(void)
 		tpm_wd_init(WDT_CPLD_REG);
 		tpm_wd_update();
 	}
+	mcu_exec_step=pre_main_loop;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	while (1) {
 		uint32_t i2creg;
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
