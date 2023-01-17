@@ -98,7 +98,10 @@ enum mcu_exec_steps_t{
 	exchangedatablockxilinx3=22,
 	exchangedatablockxilinx4=23,
 	exchangedatablockxilinx5=24,
-	exchangedatablockxilinx6=25
+	exchangedatablockxilinx6=25,
+	taskslow1=26,
+	taskslow2=27,
+	taskslow3=28
 	};
 
 enum i2c_control_status_t{
@@ -182,8 +185,8 @@ void deb_print(uint8_t debug_level = 0){
 	char * str;
 	str = const_cast<char *>(bufferOut);
 	struct io_descriptor *uartDebug;
-	usart_sync_get_io_descriptor(&USART_0, &uartDebug);
-	usart_sync_enable(&USART_0);
+	usart_sync_get_io_descriptor(&USART_XO3, &uartDebug);
+	usart_sync_enable(&USART_XO3);
 	switch (debug_level) {
 		case 0x1:
 			io_write(uartDebug, (uint8_t *)"d1:", (unsigned)3);
@@ -220,6 +223,7 @@ void exchangeDataBlock();
 void ADCreadSingle();
 void ADCstart();
 void TWIdataBlock(void);
+void check_bus_access();
 
 /*******************************************************************/
 
@@ -232,6 +236,41 @@ void framRead(uint32_t fram_register, uint32_t* readback){
 
 void framWrite(uint32_t fram_register, uint32_t writedata){
 	XO3_WriteByte(itpm_cpld_bram_cpu + fram_register, writedata);
+}
+
+
+void check_bus_access()
+{
+	uint32_t rreg=0; 
+	uint32_t errors_det=0;
+	DEBUG_PRINT("XO3 ACCESS Check\n");
+	XO3_WriteByte(itpm_cpld_regfile_xo3_link, 0);
+	for(uint32_t i=0;i<1000;i++)
+	{
+		XO3_WriteByte(itpm_cpld_regfile_user_reg1,i);
+		rreg=0;
+		XO3_Read(itpm_cpld_regfile_user_reg1,&rreg);
+		if(rreg!=i)
+		{
+			//gpio_set_pin_level(XO3_LINK1, true);
+			//gpio_set_pin_level(XO3_LINK1, false);
+			XO3_Read(itpm_cpld_regfile_user_reg1,&rreg);
+			if(rreg!=i)
+			{
+				DEBUG_PRINT("Error Detected, exp %x, read %x \n", i, rreg);
+				errors_det++;
+			}
+			else{
+				DEBUG_PRINT("Error Detected but recovered\n", i, rreg);
+				errors_det++;
+			}
+		}	
+	}
+	if(errors_det == 0)
+		DEBUG_PRINT("Check PASSED no errors\n");
+	else
+		DEBUG_PRINT("Check FAILED, detected %d errors\n", errors_det );
+	
 }
 
 /*
@@ -1670,7 +1709,7 @@ void taskSlow(){
 	framRead(FRAM_MCU_VERSION, &res);
 	if (res == _build_version){
 		if (errorSPI > 0){
-			DEBUG_PRINT1("INFO: SPI Bus revived. Comunication OK\n");
+			DEBUG_PRINT("INFO: SPI Bus revived. Comunication OK\n");
 			errorSPI = 0;
 		}
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
@@ -1685,7 +1724,8 @@ void taskSlow(){
 			}
 		}
 		exchangeDataBlock();
-		
+		//mcu_exec_step=taskslow1;
+		//framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 		framRead(FRAM_MCU_POOLING_INTERVAL, &pollingNew);
 		InternalCounter_CPLD_update++;
 		if(InternalCounter_CPLD_update % 10 == 0)
@@ -1698,14 +1738,16 @@ void taskSlow(){
 			pollingNew = 2000;
 			framWrite(FRAM_MCU_POOLING_INTERVAL, 2000);
 		}
-		if (pollingOld != pollingNew){
+		if ((pollingOld != pollingNew) && (pollingNew != 0) ){
+			DEBUG_PRINT("New polling time detected: %x \n", pollingNew);
 			timer_stop(&TIMER_0);
 			TIMER_0_task1.interval = pollingNew;
 			timer_start(&TIMER_0);
 			pollingOld = pollingNew;
-			DEBUG_PRINT("Pooling Time Changed to %d\n", pollingNew);
+			DEBUG_PRINT("Pooling Time Changed to %x\n", pollingNew);
 		}
-	
+		//mcu_exec_step=taskslow2;
+		//framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 		framRead(FRAM_MCU_BOOTLOADER_COMMANDS, &res2);
 		if (res2 < 0xffffffff){
 			if (res2 == BL_REQUEST_BOOT){
@@ -1724,6 +1766,8 @@ void taskSlow(){
 		}
 	}
 	else{
+		//mcu_exec_step=taskslow3;
+		//framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 		DEBUG_PRINT1("CRITICAL ERROR: no SPI bus comunication. Expected %x read %x\n", _build_version, res);
 		errorSPI++;
 		if (errorSPI > 10){
@@ -1962,6 +2006,7 @@ int main(void)
 	StartupStuff();
 	mcu_exec_step=post_startup_stuff;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	gpio_set_pin_level(XO3_LINK1, false);
 
 
 	uint32_t mtime, xil;
@@ -2032,6 +2077,7 @@ int main(void)
 		if (irqTimerSlow) taskSlow();
 		if (irqPG > 0) IRQinternalPGhandler();
 		if (check_pg_en) CheckPowerGoodandEnable();
+		check_bus_access();
 		
 	}
 }

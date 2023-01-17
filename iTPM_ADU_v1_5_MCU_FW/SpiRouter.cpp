@@ -174,7 +174,7 @@ SPI_sync(
 			}
 		}
 		
-		uint8_t scoda_tx = 0xff;		
+		uint8_t scoda_tx[4] = {0xff,0xff,0xff,0xff};		
 		struct spi_xfer scoda;		
 		struct spi_xfer transfer;
 		
@@ -188,13 +188,14 @@ SPI_sync(
 			gpio_set_pin_level(FPGA_CS, false); // Select Device and pulldown CS	
 			int32_t risp = spi_m_sync_transfer(&SPI_0, &transfer);
 		    
-			//wait acknowledge 
-			if (rxbuf[0] != 0x0)
-			{
+
 				
 				scoda.rxbuf = rxbuf;
-				scoda.txbuf = &scoda_tx;
+				scoda.txbuf = scoda_tx;
 				scoda.size  = 1; 
+				//wait acknowledge
+				//if (rxbuf[0] != 0x0)
+				//{
 			 
 				while (1){
 					risp = spi_m_sync_transfer(&SPI_0, &scoda);
@@ -207,7 +208,7 @@ SPI_sync(
 					}
 					count_delay++;
 				}
-			}
+			//}
 			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
 			memcpy(rxBuffer, &rxbuf[offset+latency], length);
 		}
@@ -223,7 +224,7 @@ SPI_sync(
 			int32_t risp = spi_m_sync_transfer(&SPI_0, &transfer);
 			
 			scoda.rxbuf = rxbuf;
-			scoda.txbuf = &scoda_tx;
+			scoda.txbuf = scoda_tx;
 			scoda.size  = 1;
 			
 			while (1){
@@ -239,7 +240,7 @@ SPI_sync(
 
 			}
 			
-			scoda.size  = 5;
+			scoda.size  = 4;
 			
 			risp = spi_m_sync_transfer(&SPI_0, &scoda);
 			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS

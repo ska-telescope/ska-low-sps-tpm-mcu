@@ -134,6 +134,7 @@ void EXTERNAL_IRQ_0_init(void)
 	gpio_set_pin_function(XO3_LINK0, PINMUX_PA19A_EIC_EXTINT3);
 
 	// Set pin direction to input
+	
 	gpio_set_pin_direction(XO3_LINK1, GPIO_DIRECTION_IN);
 
 	gpio_set_pin_pull_mode(XO3_LINK1,
@@ -145,7 +146,8 @@ void EXTERNAL_IRQ_0_init(void)
 	                       GPIO_PULL_OFF);
 
 	gpio_set_pin_function(XO3_LINK1, PINMUX_PA20A_EIC_EXTINT4);
-
+	
+	
 	// Set pin direction to input
 	gpio_set_pin_direction(PG_FPGA, GPIO_DIRECTION_IN);
 
@@ -413,6 +415,13 @@ void system_init(void)
 	gpio_set_pin_direction(USR_LED1, GPIO_DIRECTION_OUT);
 
 	gpio_set_pin_function(USR_LED1, GPIO_PIN_FUNCTION_OFF);
+	
+
+	//debug_only	
+	//gpio_set_pin_direction(XO3_LINK1, GPIO_DIRECTION_OUT);
+
+	//gpio_set_pin_function(XO3_LINK1, GPIO_PIN_FUNCTION_OFF);
+	
 
 	ADC_0_init();
 	EXTERNAL_IRQ_0_init();
