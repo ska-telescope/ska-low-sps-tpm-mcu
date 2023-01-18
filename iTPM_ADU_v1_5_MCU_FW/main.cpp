@@ -70,7 +70,7 @@ const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUIL
 #define FPGA_FE_CURRENT 2
 #define I2C_CONNECTION_ERR_MAX 25
 #define ETH_REG_NUM 6
-#define WDT_CPLD_REG 0xf //150ms * 4 = 600 ms
+#define WDT_CPLD_REG 0x4 //250ms * 4 = 1 s
 
 /* EXECUTION STEP DEFINES */
 enum mcu_exec_steps_t{
@@ -169,6 +169,7 @@ uint32_t xil_sysmon_fpga0_offset, xil_sysmon_fpga1_offset;
 bool XilinxBlockNewInfo = false;
 volatile i2c_control_status_t i2c_ctrl_status=waiting_first_req;
 volatile mcu_exec_steps_t mcu_exec_step=post_internal_periph_init; 
+
 
 uint32_t i2c_connection_error=0;
 uint32_t cpld_fw_vers=0;
@@ -422,7 +423,7 @@ void tpm_wd_init(uint8_t time)
 {
 	uint32_t readdata; 
 	XO3_Read(itpm_cpld_regfile_wdt_mcu, &readdata);
-	readdata = readdata | (time<<16);
+	readdata = (readdata & 0xffff) | (time<<16);
 	XO3_WriteByte(itpm_cpld_regfile_wdt_mcu,readdata);
 }
 
@@ -1903,7 +1904,8 @@ int i2c_manager(void)
 	}
 	else if(i2c_ctrl_status==ack_send)
 	{
-		framRead(I2C_ACNOWLEDGE_S,&read_data);
+
+		framRead(I2C_REQUEST_S,&read_data);
 		if(read_data==0)
 		{	
 			DEBUG_PRINT("I2C ACK RECEIVED\n");	
@@ -1911,8 +1913,7 @@ int i2c_manager(void)
 			XO3_WriteByte(itpm_cpld_i2c_password_lo, 0);
 			framWrite(I2C_PASSWORD_HI_S,0x0);
 			framWrite(I2C_PASSWORD_LO_S,0x0);
-			framWrite(I2C_REQUEST_S,0x0);
-			
+			framWrite(I2C_ACNOWLEDGE_S,0x0);
 			i2c_ctrl_status=waiting_first_req;		
 		}
 	}
@@ -2006,7 +2007,7 @@ int main(void)
 	StartupStuff();
 	mcu_exec_step=post_startup_stuff;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
-	gpio_set_pin_level(XO3_LINK1, false);
+	//gpio_set_pin_level(XO3_LINK1, false); //debug only
 
 
 	uint32_t mtime, xil;
@@ -2052,6 +2053,7 @@ int main(void)
 		tpm_wd_init(WDT_CPLD_REG);
 		tpm_wd_update();
 	}
+	framWrite(ENABLE_ACCESS_CHECK, 0);	//disable access check
 	mcu_exec_step=pre_main_loop;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	while (1) {
@@ -2077,7 +2079,9 @@ int main(void)
 		if (irqTimerSlow) taskSlow();
 		if (irqPG > 0) IRQinternalPGhandler();
 		if (check_pg_en) CheckPowerGoodandEnable();
-		check_bus_access();
+		framRead(ENABLE_ACCESS_CHECK,&data);
+		if(data != 0)
+			check_bus_access();
 		
 	}
 }
