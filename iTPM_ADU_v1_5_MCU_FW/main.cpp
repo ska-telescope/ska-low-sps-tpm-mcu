@@ -170,12 +170,15 @@ bool XilinxBlockNewInfo = false;
 volatile i2c_control_status_t i2c_ctrl_status=waiting_first_req;
 volatile mcu_exec_steps_t mcu_exec_step=post_internal_periph_init; 
 
+volatile i2c_control_status_t i2c_ctrl_status_last=waiting_first_req;
 
 uint32_t i2c_connection_error=0;
 uint32_t cpld_fw_vers=0;
 uint32_t mcu_heartbit=0;
 uint32_t pgood_reg=0;
 uint32_t ena_reg=0;
+volatile uint32_t last_i2c_ack=0;
+volatile uint32_t last_i2c_req=0;
 
 
 
@@ -230,9 +233,7 @@ void check_bus_access();
 
 
 void framRead(uint32_t fram_register, uint32_t* readback){
-	uint32_t intreadback;
-	XO3_Read(itpm_cpld_bram_cpu + fram_register, &intreadback);
-	*readback = intreadback;
+	XO3_Read(itpm_cpld_bram_cpu + fram_register, readback);
 }
 
 void framWrite(uint32_t fram_register, uint32_t writedata){
@@ -248,14 +249,19 @@ void check_bus_access()
 	XO3_WriteByte(itpm_cpld_regfile_xo3_link, 0);
 	for(uint32_t i=0;i<1000;i++)
 	{
-		XO3_WriteByte(itpm_cpld_regfile_user_reg1,i);
+		//gpio_set_pin_level(XO3_LINK1, true);
+		//gpio_set_pin_level(XO3_LINK1, false);
 		rreg=0;
-		XO3_Read(itpm_cpld_regfile_user_reg1,&rreg);
+		framWrite(DBG_ACCESS_CHECK,i);
+		framRead(DBG_ACCESS_CHECK,&rreg);
+
 		if(rreg!=i)
 		{
 			//gpio_set_pin_level(XO3_LINK1, true);
 			//gpio_set_pin_level(XO3_LINK1, false);
-			XO3_Read(itpm_cpld_regfile_user_reg1,&rreg);
+			//set_i2c_pwd();
+			//XO3_WriteByte(itpm_cpld_i2c_ip,0x0);
+			framRead(DBG_ACCESS_CHECK,&rreg);
 			if(rreg!=i)
 			{
 				DEBUG_PRINT("Error Detected, exp %x, read %x \n", i, rreg);
@@ -1806,6 +1812,27 @@ int i2c_manager(void)
 	mcu_exec_step=i2c_manage;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	
+	framRead(I2C_ACNOWLEDGE_S,&read_data);
+	if (read_data!=last_i2c_ack)
+	{
+		DEBUG_PRINT("I2C ACK Change %x, i2c state %x \n",read_data,i2c_ctrl_status);
+		last_i2c_ack=read_data;
+	}
+	framRead(I2C_REQUEST_S,&read_data);
+	if (read_data!=last_i2c_req)
+	{
+		DEBUG_PRINT("I2C REQ Change %x, i2c state %x \n",read_data,i2c_ctrl_status);
+		last_i2c_req=read_data;
+	}
+	if (i2c_ctrl_status_last!=i2c_ctrl_status)
+	{
+		DEBUG_PRINT("I2C Status Change i2c last %x, current state %x \n",i2c_ctrl_status_last,i2c_ctrl_status);
+		i2c_ctrl_status_last=i2c_ctrl_status;
+	}
+	
+	
+	
+	
 	if (i2c_ctrl_status==waiting_first_req)
 	{
 		framRead(I2C_REQUEST_S,&read_data);
@@ -1813,7 +1840,10 @@ int i2c_manager(void)
 		{
 			framRead(I2C_REQUEST_S,&read_data);
 			if (read_data==0)
+			{
+				DEBUG_PRINT("Error request low after request detection\n");
 				return 0;
+			}
 			DEBUG_PRINT("request_received: %x \n",read_data);	
 			//manage I2 Password
 			timeout=0;
@@ -1828,14 +1858,24 @@ int i2c_manager(void)
 				//delay_us(1);
 				XO3_Read(itpm_cpld_i2c_password, &read_data);
 				framWrite(I2C_PASSWORD_HI_S,read_data);
+				framRead(I2C_PASSWORD_HI_S,&pwd_h);
+				if(pwd_h!=read_data){
+					gpio_set_pin_level(XO3_LINK1, true);
+					gpio_set_pin_level(XO3_LINK1, false);
+					DEBUG_PRINT("I2C I2C_PASSWORD_HI_S write error\n");
+				
+				}
 				DEBUG_PRINT3("I2C_PWD %x\n",read_data);
 				if((read_data&0x10000)==0x10000)
 					break;
 				timeout++;
-			} while (timeout < 20);
-			if (timeout==20)
+			} while (timeout < 1);
+			if (timeout==1)
 			{
 				DEBUG_PRINT("I2C Password not accepted\n");	
+				DEBUG_PRINT("I2C_PASSWORD_HI_S %x\n",pwd_h);
+				DEBUG_PRINT("I2C_PWD_H %x\n",read_data);
+				DEBUG_PRINT("I2C_PWD_L %x\n",pwd_l);
 				return -1;
 			}
 				
@@ -1857,7 +1897,7 @@ int i2c_manager(void)
 			if (XO3_Read(itpm_cpld_i2c_status, &statusIN)!= 0)
 			{
 				//return -1;
-				write_error++;
+				read_error++;
 			}
 			while (statusIN == 0x1 || statusIN == 0x3) {
 				busyRetry++;
@@ -1895,6 +1935,13 @@ int i2c_manager(void)
 					framWrite(I2C_STATUS_S,statusIN);
 					framWrite(I2C_RECEIVE_S,dataIN);
 					framWrite(I2C_ACNOWLEDGE_S,0x1);
+					framRead(I2C_ACNOWLEDGE_S,&read_data);
+					if(read_data!=1)
+					{
+						gpio_set_pin_level(XO3_LINK1, true);
+						gpio_set_pin_level(XO3_LINK1, false);
+						DEBUG_PRINT("I2C_ACNOWLEDGE_S write 1 ERROR\n");
+					}
 					//framWrite(I2C_REQUEST_S,0x0);
 					i2c_ctrl_status=ack_send;
 					DEBUG_PRINT("I2C ACK SEND OP OK\n");
@@ -1908,15 +1955,28 @@ int i2c_manager(void)
 		framRead(I2C_REQUEST_S,&read_data);
 		if(read_data==0)
 		{	
-			DEBUG_PRINT("I2C ACK RECEIVED\n");	
+			DEBUG_PRINT("I2C REQ DEASSERT RECEIVED\n");	
 			XO3_WriteByte(itpm_cpld_i2c_password, 0);
 			XO3_WriteByte(itpm_cpld_i2c_password_lo, 0);
 			framWrite(I2C_PASSWORD_HI_S,0x0);
 			framWrite(I2C_PASSWORD_LO_S,0x0);
 			framWrite(I2C_ACNOWLEDGE_S,0x0);
+			framRead(I2C_ACNOWLEDGE_S,&read_data);
+			if(read_data!=0)
+			{
+				gpio_set_pin_level(XO3_LINK1, true);
+				gpio_set_pin_level(XO3_LINK1, false);
+				DEBUG_PRINT("I2C_ACNOWLEDGE_S write 0 ERROR\n");
+			}
+			
 			i2c_ctrl_status=waiting_first_req;		
 		}
 	}
+	
+	framRead(ENABLE_ACCESS_CHECK,&read_data);
+	if(read_data != 0)
+		check_bus_access();
+	
 	return 0;
 }
 
@@ -2068,6 +2128,7 @@ int main(void)
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
 			tpm_wd_update();
+			i2c_manager();
 		}
 		ADCreadSingle();
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
@@ -2076,12 +2137,23 @@ int main(void)
 			i2c_manager();
 		}
 		if (irqExternalFPGA) IRQinternalCPLDhandler();
+		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		{
+			tpm_wd_update();
+			i2c_manager();
+		}
 		if (irqTimerSlow) taskSlow();
+		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		{
+			tpm_wd_update();
+			i2c_manager();
+		}
 		if (irqPG > 0) IRQinternalPGhandler();
-		if (check_pg_en) CheckPowerGoodandEnable();
-		framRead(ENABLE_ACCESS_CHECK,&data);
-		if(data != 0)
-			check_bus_access();
-		
+		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
+		{
+			tpm_wd_update();
+			i2c_manager();
+		}
+		if (check_pg_en) CheckPowerGoodandEnable();	
 	}
 }

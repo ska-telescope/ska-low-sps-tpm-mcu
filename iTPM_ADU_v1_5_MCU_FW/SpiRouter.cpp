@@ -47,8 +47,8 @@ void deb_print_spi(uint8_t debug_level = 0){
 	char * str;
 	str = const_cast<char *>(bufferOut_spi);
 	struct io_descriptor *uartDebug;
-	usart_sync_get_io_descriptor(&USART_0, &uartDebug);
-	usart_sync_enable(&USART_0);
+	usart_sync_get_io_descriptor(&USART_XO3, &uartDebug);
+	usart_sync_enable(&USART_XO3);
 	switch (debug_level) {
 		case 0x1:
 		io_write(uartDebug, (uint8_t *)"d1:", (unsigned)3);
@@ -296,24 +296,24 @@ XO3_WriteByte(
 	txBuffer[7] = 0xFF & (value >> 8);
 	txBuffer[8] = 0xFF & (value);
 
-	 SPI_sync(1, txBuffer, rxBuffer, 9);
-	/*while(retry>0) 
+	//SPI_sync(1, txBuffer, rxBuffer, 9);
+	while(retry>0) 
 	{
 		success = SPI_sync(1, txBuffer, rxBuffer, 9);
 		if (success == -1)
 			retry=retry-1;
 		else break;
 	} 
-	*/
-	uint32_t veryfy_data=0;
-	if (XO3_Read3(regs,&veryfy_data) != 0)
-		return -1;
-	else
-		if (veryfy_data != value )
-		{
-			//DEBUG_PRINT_SPI("Error in verify regs %x, exp %x, read %x \n",regs,value,veryfy_data);
-			//return -1;
-		}
+	
+	//uint32_t veryfy_data=0;
+	//if (XO3_Read(regs,&veryfy_data) != 0)
+	//	return -1;
+	//else
+	//	if (veryfy_data != value )
+	//	{
+	//		//DEBUG_PRINT_SPI("Error in verify regs %x, exp %x, read %x \n",regs,value,veryfy_data);
+	//		//return -1;
+	//	}
 	return 0;	
 } // XO3_Write
 /*
