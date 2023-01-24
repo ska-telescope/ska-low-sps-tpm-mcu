@@ -73,6 +73,8 @@ void deb_print_spi(uint8_t debug_level = 0){
 #define DEBUG_PRINT_SPI(...) do{ } while ( false )
 #endif
 
+extern uint32_t mcu_heartbit;
+#define MAX_SPI_DELAY 70000 //timeout CPLD max 500ms, T_Polling SPI stimato 8 us -> 500ms/8us = 62500
 
 #ifndef __cplusplus
 #define nullptr ((void*)0)
@@ -204,7 +206,20 @@ SPI_sync(
 					{
 						gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
 						DEBUG_PRINT_SPI("SPI Timeout cmd received in write op\n");
+						free(buffer);
+						free(rxbuffer);
 						return -1;
+					}
+					else if (count_delay > MAX_SPI_DELAY)
+					{
+						gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
+						DEBUG_PRINT_SPI("SPI Max Retry count timout cmd not received in Write op\n");
+						gpio_set_pin_level(XO3_LINK1, true);
+						gpio_set_pin_level(XO3_LINK1, false);
+						free(buffer);
+						free(rxbuffer);
+						return -1;
+				
 					}
 					count_delay++;
 				}
@@ -234,10 +249,23 @@ SPI_sync(
 				{
 					gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
 					DEBUG_PRINT_SPI("SPI Timeout cmd received in read op\n");
+					free(buffer);
+					free(rxbuffer);
 					return -1;
 				}
+				else if (count_delay > MAX_SPI_DELAY)
+				{
+					gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
+					//gpio_set_pin_level(XO3_LINK1, true);
+					//gpio_set_pin_level(XO3_LINK1, false);
+					DEBUG_PRINT_SPI("SPI Max Retry count timout cmd not received in read op\n");
+					free(buffer);
+					free(rxbuffer);
+					return -1;
+				
+				}
 				count_delay++;
-
+				
 			}
 			
 			scoda.size  = 4;

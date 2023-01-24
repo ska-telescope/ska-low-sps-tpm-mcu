@@ -101,7 +101,13 @@ enum mcu_exec_steps_t{
 	exchangedatablockxilinx6=25,
 	taskslow1=26,
 	taskslow2=27,
-	taskslow3=28
+	taskslow3=28,
+	exchangedatablockxilinx7=29,
+	exchangedatablockxilinx8=30,
+	exchangedatablockxilinx9=31,
+	exchangedatablockxilinx10=32,
+	xilaccessdbg=33,
+	smaplockrenew=34
 	};
 
 enum i2c_control_status_t{
@@ -211,12 +217,14 @@ void deb_print(uint8_t debug_level = 0){
 void framRead(uint32_t fram_register, uint32_t* readback);
 void framWrite(uint32_t fram_register, uint32_t writedata);
 int copyeep_ram();
-void smap_lock(bool *xil_ack, uint32_t *retry);
+void smap_lock(bool *xil_ack, uint32_t *retry,uint32_t *ticket_num);
+void smap_loc_renew(bool *xil_ack,uint32_t ticket_num);
 void smap_unlock();
 void tpm_wd_init(uint8_t time);
 void tpm_wd_enable(bool enable);
 void tpm_wd_update();
 int set_i2c_pwd(void);
+int reset_i2c_pwd(void);
 int init_eth_regs_from_eep();
 void SKAPower(bool ADCpwr, bool FRONTENDpwr, bool FPGApwr, bool SYSRpwr, bool VGApwr);
 void SKAalarmUpdate(void);
@@ -370,7 +378,7 @@ int copyeep_ram()
 	
 }*/
 
-void smap_lock(bool *xil_ack, uint32_t *retry)
+void smap_lock(bool *xil_ack, uint32_t *retry,uint32_t *ticket_num )
 {
 	*xil_ack=false;
 	uint32_t received_d=0;
@@ -411,6 +419,29 @@ void smap_lock(bool *xil_ack, uint32_t *retry)
 			} while (retry_num < 10);
 	}
 	*retry=retry_num;
+	*ticket_num=ticket;
+}
+
+
+void smap_loc_renew(bool *xil_ack,uint32_t ticket_num){
+	uint32_t received_d=0;
+	uint32_t retry_num=0;
+	mcu_exec_step=smaplockrenew;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	DEBUG_PRINT3("MCU SMAP LOCK Renew Ticket 0x%x\n",ticket_num);
+	do{
+		XO3_WriteByte(itpm_cpld_lock_lock_smap, ticket_num); // Request Xilinx Bus Ownership
+		XO3_Read(itpm_cpld_lock_lock_smap, &received_d);
+		if (received_d == ticket_num){ // Check ownership
+			*xil_ack = true;
+			DEBUG_PRINT3("CPLD SMAP LOCK MCU - Xilinx OK - Retry %i\n", timeout);
+			break;
+		}
+		else
+		{
+			retry_num++;
+		}
+	} while(retry_num<20);
 }
 
 void smap_unlock()
@@ -479,6 +510,20 @@ int set_i2c_pwd(void)
 			return 0;
 		}
 		//DEBUG_PRINT("Password accepted\n");
+}
+
+
+
+/**
+ * \brief reset i2c pwd 
+ * \details reset i2c password
+ * \return return operation status 0 ok  else failed
+ */
+int reset_i2c_pwd(void)
+{
+		uint32_t readval=0;
+		XO3_WriteByte(itpm_cpld_i2c_password,0);
+		XO3_WriteByte(itpm_cpld_i2c_password_lo,0);
 }
 
 
@@ -570,6 +615,7 @@ int init_eth_regs_from_eep()
 			XO3_Read(cpld_adds[i],&eep_data);
 			DEBUG_PRINT("CPLD ETH REGS: 0x%x = 0x%x\n",cpld_adds[i],eep_data);
 		}
+		reset_i2c_pwd();
 		return 0;
 }
 
@@ -828,8 +874,9 @@ void SKAalarmManage(){
 			{
 				if (i2c_connection_error > I2C_CONNECTION_ERR_MAX)
 				{
-					set_i2c_pwd();
-					int status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
+					int status=1;
+					if(i2c_ctrl_status==waiting_first_req)
+						status	 = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
 					if(status == 0)
 					{
 						i2c_connection_error=0;
@@ -932,6 +979,7 @@ void exchangeDataBlockXilinx(){
 	if (TPMoverrideAutoShutdown) return;
 	
 	uint32_t timeout = 0;
+	uint32_t tick_num=0;
 	bool xil_ack = false;
 	static bool offset_read0 = false;
 	static bool offset_read1 = false;
@@ -940,7 +988,7 @@ void exchangeDataBlockXilinx(){
 	uint32_t ticket;
 	static bool xil0_sm_disabled = false;
 	static bool xil1_sm_disabled = false;
-	smap_lock(&xil_ack,&timeout);
+	smap_lock(&xil_ack,&timeout,&tick_num);
 	if ((timeout >= 20) && !xil_ack){
 		DEBUG_PRINT2("CPLD LOCK MCU - Xilinx Busy (Maybe someone is programming the FPGAs?)\n");  // Timeout
 		offset_read0 = false;
@@ -968,16 +1016,24 @@ void exchangeDataBlockXilinx(){
 		uint32_t res2;
 		if (res & EN_FPGA) { // EnableShadow Reg
 			if (((xil_done == 1) && (xil_init == 1)) || ((xil_done == 3) && (xil_init == 3))){
+				smap_loc_renew(&xil_ack,tick_num);
+				if(xil_ack==false)
+				DEBUG_PRINT("Error While Renew SMAP LOCK");
 				if (timer > 4){
 					mcu_exec_step=exchangedatablockxilinx3;
 					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					// Xilinx System Monitor load base address from CPLD
 					XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
+					mcu_exec_step=exchangedatablockxilinx7;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+					
 					// Check version
 					XO3_ReadXilinx(itpm_cpld_wb_c2c0, &res2);
+					mcu_exec_step=exchangedatablockxilinx8;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					if (res2 < 0x1021752) {
 						offset_read0 = false;
-						DEBUG_PRINT1("Xil0 FW Ver 0x%x too old. System Monitor 0 disabled\n", res2);
+						DEBUG_PRINT("Xil0 FW Ver 0x%x too old. System Monitor 0 disabled\n", res2);
 						xil0_sm_disabled = true;
 						//XO3_WriteByte(itpm_cpld_regfile_enable, res+EN_ADC);
 						}
@@ -999,9 +1055,13 @@ void exchangeDataBlockXilinx(){
 					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					XilinxBlockNewInfo = true;
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_FE_CURRENT_OFF), &res);
+					mcu_exec_step=exchangedatablockxilinx9;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					framWrite(FRAM_FPGA0_FE_CURRENT, res);
 					VoltagesTemps[FPGA0FEVA].ADCread = uint16_t(res);
 					XO3_ReadXilinx((xil_sysmon_fpga0_offset+XIL_SYSMON_FPGA0_TEMP), &res);
+					mcu_exec_step=exchangedatablockxilinx10;
+					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 					framWrite(FRAM_FPGA0_TEMP, res);
 					VoltagesTemps[FPGA0TEMP].ADCread = uint16_t(res);
 #ifdef XILINX_DEBUG_TEXT
@@ -1010,6 +1070,9 @@ void exchangeDataBlockXilinx(){
 				}
 			}
 			if (((xil_done == 2) && (xil_init == 2)) || ((xil_done == 3) && (xil_init == 3))){
+				smap_loc_renew(&xil_ack,tick_num);
+				if(xil_ack==false)
+					DEBUG_PRINT("Error While Renew SMAP LOCK");
 				if (timer > 5){
 					mcu_exec_step=exchangedatablockxilinx5;
 					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
@@ -1166,7 +1229,6 @@ void TWIdataBlock(void){
 	DEBUG_PRINT3("TWI Data Block\n");
 	// i2c1
    //readBoardTemp(&ADT7408_temp, &ADT7408Regs[3]); // Disabled for errors
-	set_i2c_pwd();
 	status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
 	if(status == 0)
 	{
@@ -1720,7 +1782,7 @@ void taskSlow(){
 			errorSPI = 0;
 		}
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
-		if(res&EN_ADC == EN_ADC)
+		if((res&EN_ADC == EN_ADC) && (i2c_ctrl_status==waiting_first_req) )
 			TWIdataBlock();
 		else{
 			framRead(FRAM_BOARD_ALARM, &res);
@@ -1799,6 +1861,7 @@ int i2c_manager(void)
 {
 	uint32_t read_data;
 	uint32_t pwd_h=0;
+	uint32_t pwd_h_last=0;
 	uint32_t pwd_l=0;
 	uint32_t dataIN=0;
 	uint32_t statusIN; //0x0 ok - 0x1
@@ -1830,9 +1893,6 @@ int i2c_manager(void)
 		i2c_ctrl_status_last=i2c_ctrl_status;
 	}
 	
-	
-	
-	
 	if (i2c_ctrl_status==waiting_first_req)
 	{
 		framRead(I2C_REQUEST_S,&read_data);
@@ -1850,33 +1910,48 @@ int i2c_manager(void)
 			do 
 			{
 				framRead(I2C_PASSWORD_HI_S,&pwd_h);
-				DEBUG_PRINT3("I2C_PWD_HI_S %x\n",pwd_h);
+				/*
+				if(pwd_h==0)
+					DEBUG_PRINT("I2C_PASSWORD_HI_S ERROR Read 0 FROM SHADOW PWDH: %x\n",pwd_h);
+				*/
+				//DEBUG_PRINT3("I2C_PWD_HI_S %x\n",pwd_h);
 				XO3_WriteByte(itpm_cpld_i2c_password, pwd_h);
-				framRead(I2C_PASSWORD_LO_S,&pwd_l);
-				DEBUG_PRINT3("I2C_PWD_LO_S %x\n",pwd_l);
-				XO3_WriteByte(itpm_cpld_i2c_password_lo, pwd_l);
-				//delay_us(1);
+				/*
 				XO3_Read(itpm_cpld_i2c_password, &read_data);
-				framWrite(I2C_PASSWORD_HI_S,read_data);
-				framRead(I2C_PASSWORD_HI_S,&pwd_h);
 				if(pwd_h!=read_data){
 					gpio_set_pin_level(XO3_LINK1, true);
 					gpio_set_pin_level(XO3_LINK1, false);
-					DEBUG_PRINT("I2C I2C_PASSWORD_HI_S write error\n");
-				
+					DEBUG_PRINT("I2C password_hi write error: wr %x, rd %x\n",pwd_h,read_data);
+					XO3_Read(itpm_cpld_i2c_password_lo, &read_data);
+					DEBUG_PRINT("I2C password_lo is: rd %x\n",read_data);
 				}
-				DEBUG_PRINT3("I2C_PWD %x\n",read_data);
+				*/
+				framRead(I2C_PASSWORD_LO_S,&pwd_l);
+				//DEBUG_PRINT3("I2C_PWD_LO_S %x\n",pwd_l);
+				XO3_WriteByte(itpm_cpld_i2c_password_lo, pwd_l);
+				/*
+				XO3_Read(itpm_cpld_i2c_password_lo, &read_data);
+				if(pwd_l!=read_data){
+					gpio_set_pin_level(XO3_LINK1, true);
+					gpio_set_pin_level(XO3_LINK1, false);
+					DEBUG_PRINT("I2C password_lo write error: wr %x, rd %x\n",pwd_l,read_data);
+				}*/			
+				XO3_Read(itpm_cpld_i2c_password, &read_data);
+				//DEBUG_PRINT3("I2C_PWD %x\n",read_data);
 				if((read_data&0x10000)==0x10000)
 					break;
 				timeout++;
 			} while (timeout < 1);
 			if (timeout==1)
 			{
+				gpio_set_pin_level(XO3_LINK1, true);
+				gpio_set_pin_level(XO3_LINK1, false);
 				DEBUG_PRINT("I2C Password not accepted\n");	
-				DEBUG_PRINT("I2C_PASSWORD_HI_S %x\n",pwd_h);
-				DEBUG_PRINT("I2C_PWD_H %x\n",read_data);
-				DEBUG_PRINT("I2C_PWD_L %x\n",pwd_l);
+				DEBUG_PRINT("I2C itpm_cpld_i2c_password %x\n",read_data);
 				return -1;
+			}
+			else{
+				framWrite(I2C_PASSWORD_HI_S,read_data);
 			}
 				
 			framRead(I2C_TRANSMIT_S,&read_data);	
@@ -1935,6 +2010,7 @@ int i2c_manager(void)
 					framWrite(I2C_STATUS_S,statusIN);
 					framWrite(I2C_RECEIVE_S,dataIN);
 					framWrite(I2C_ACNOWLEDGE_S,0x1);
+					/*
 					framRead(I2C_ACNOWLEDGE_S,&read_data);
 					if(read_data!=1)
 					{
@@ -1942,6 +2018,7 @@ int i2c_manager(void)
 						gpio_set_pin_level(XO3_LINK1, false);
 						DEBUG_PRINT("I2C_ACNOWLEDGE_S write 1 ERROR\n");
 					}
+					*/
 					//framWrite(I2C_REQUEST_S,0x0);
 					i2c_ctrl_status=ack_send;
 					DEBUG_PRINT("I2C ACK SEND OP OK\n");
@@ -1957,10 +2034,28 @@ int i2c_manager(void)
 		{	
 			DEBUG_PRINT("I2C REQ DEASSERT RECEIVED\n");	
 			XO3_WriteByte(itpm_cpld_i2c_password, 0);
+			/*
+			XO3_Read(itpm_cpld_i2c_password, &read_data);
+			if(read_data!=0)
+			{
+				gpio_set_pin_level(XO3_LINK1, true);
+				gpio_set_pin_level(XO3_LINK1, false);
+				DEBUG_PRINT("I2C itpm_cpld_i2c_password reset to 0 ERROR\n");
+			}*/
 			XO3_WriteByte(itpm_cpld_i2c_password_lo, 0);
+			/*
+			XO3_Read(itpm_cpld_i2c_password_lo, &read_data);
+			if(read_data!=0)
+			{
+				gpio_set_pin_level(XO3_LINK1, true);
+				gpio_set_pin_level(XO3_LINK1, false);
+				DEBUG_PRINT("I2C itpm_cpld_i2c_password_lo reset to 0 ERROR\n");
+			}
+			*/
 			framWrite(I2C_PASSWORD_HI_S,0x0);
 			framWrite(I2C_PASSWORD_LO_S,0x0);
 			framWrite(I2C_ACNOWLEDGE_S,0x0);
+			/*
 			framRead(I2C_ACNOWLEDGE_S,&read_data);
 			if(read_data!=0)
 			{
@@ -1968,7 +2063,7 @@ int i2c_manager(void)
 				gpio_set_pin_level(XO3_LINK1, false);
 				DEBUG_PRINT("I2C_ACNOWLEDGE_S write 0 ERROR\n");
 			}
-			
+			*/
 			i2c_ctrl_status=waiting_first_req;		
 		}
 	}
@@ -1988,80 +2083,16 @@ void i2c_manager_cb(const struct timer_task *const timer_task)
 
 int main(void)
 {
-	// Cheap delay startup ~1000 ms total
-	//for (int i = 0; i < 0xffff; i++) asm("nop");
+	uint32_t data=0;
+	bool pippo = true;
+	uint32_t pippo2=0;
+	uint32_t mtime, xil;
+	uint32_t xil_done = 0xfeffffff;
+	
 	
 	/* Initializes MCU, drivers and middleware */
 	atmel_start_init();
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
-	uint32_t data=0;
-	
-	//SysTick_Config(1);
-	bool pippo = true;
-	
-	//if (pollingOld == 0x25) pippo = false;
-	/*
-	while (pippo){
-		asm("nop");
-	}
-	*/
-	uint32_t pippo2=0;
-
-	/*
-	uint32_t res;
-	uint32_t ticket;
-	uint32_t to=0;
-	
-	for (int z=0;z<100;z++)
-	{
-		DEBUG_PRINT("DEBUG: Check lock, iter %d \n",z);
-		bool i2c_ack = false;
-		to=0;
-		XO3_Read(itpm_cpld_lock_queue_number, &ticket);
-		do{
-			XO3_WriteByte(itpm_cpld_lock_lock_i2c, ticket); // Request I2C Ownership
-			XO3_Read(itpm_cpld_lock_lock_i2c, &res);
-			if (res == ticket){ // Check ownership
-				DEBUG_PRINT("DEBUG:CPLD MCU Lock: I2C LOCKED from MCU\n");
-				i2c_ack = true;
-				break;
-			}
-			else to++;
-		} while (to < 20 );
-		if (to==20)
-			DEBUG_PRINT("DEBUG:CPLD MCU Lock: I2C LOCKED failed\n");
-		else
-			XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); 
-	}
-	*/
-
-	
-	/*
-	while(data < 3000000)
-	{
-		XO3_WriteByte(0x30000014,data);
-		XO3_Read(0x30000014, &pippo2);
-		if(pippo2!=data)
-		{
-			DEBUG_PRINT("Error detected expected %d, read %d\n", data,pippo2);	
-		}
-		data=data+1;
-		if (data%1000==0) DEBUG_PRINT("Op num %d\n", data);	
-	}
-	*/
-		
-	/*
-	framWrite(FRAM_MCU_VERSION, _build_version);				
-	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);
-	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);
-	XO3_Read(itpm_cpld_regfile_date_code, &pippo2);*/
-	
-	//XO3_Read(itpm_cpld_regfile_wdt_sem, &pippo2);
-	//DEBUG_PRINT("WD SEM REG VAL 0x%x\n",pippo2);
-	
-	//XO3_Read(itpm_cpld_regfile_wdt_mcu, &pippo2);
-	//DEBUG_PRINT("WD REG VAL 0x%x\n",pippo2);
-	//tpm_wd_update();
 	mcu_exec_step=pre_startup_stuff;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	StartupStuff();
@@ -2069,32 +2100,14 @@ int main(void)
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	//gpio_set_pin_level(XO3_LINK1, false); //debug only
 
-
-	uint32_t mtime, xil;
-	uint32_t xil_done = 0xfeffffff;
-
-	//XO3_WriteByte(itpm_cpld_regfile_enable, 0x1f);
-	
-	//delay_ms(1000);
-	
-// 	while (1){
-// 		XO3_WriteByte(itpm_cpld_regfile_user_reg0, 0x12345678);
-// 		XO3_Read(itpm_cpld_regfile_user_reg0, &xil_done);
-// 	}
-	
 	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
 	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
-	
-	//ExtFlash_SRAMErase(0x01);
-	//ExtFlash_FPGA_Prog(0x0f, 0x1, true);
-	
 	xil_done = 0xffffffff;	
 	XO3_BitfieldExtract(itpm_cpld_regfile_xilinx, itpm_cpld_regfile_xilinx_done_M, itpm_cpld_regfile_xilinx_done_B,&xil_done);
 	XO3_Read(itpm_cpld_regfile_xilinx, &xil);
 
 	/* Replace with your application code */
-	
-	
+		
 	TIMER_0_task1.interval = 1000;
 	TIMER_0_task1.cb       = IRQtimerSlow;
 	TIMER_0_task1.mode     = TIMER_TASK_REPEAT;
@@ -2116,13 +2129,19 @@ int main(void)
 	framWrite(ENABLE_ACCESS_CHECK, 0);	//disable access check
 	mcu_exec_step=pre_main_loop;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	
+	/*
+	// Xilinx System Monitor load base address from CPLD
+	XO3_ReadXilinx(XIL_SYSMON_FPGA0_OFFSET, &xil_sysmon_fpga0_offset);
+	mcu_exec_step=xilaccessdbg;
+	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	*/
 	while (1) {
 		uint32_t i2creg;
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
 			tpm_wd_update();
-			i2c_manager();
-				
+			i2c_manager();		
 		}
 		gpio_toggle_pin_level(USR_LED1);
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
