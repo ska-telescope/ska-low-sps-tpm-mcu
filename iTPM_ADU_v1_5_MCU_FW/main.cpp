@@ -115,6 +115,15 @@ enum i2c_control_status_t{
 	request_received,
 	ack_send
 	};
+	
+enum board_status_t{
+	initialization = 0,
+	running=0x1,
+	warning_l=0x2,
+	warning_h=0x4,
+	alarm_l=0x8,
+	alarm_h=0x10,
+	};
 
 
 struct ADCstruct {
@@ -146,22 +155,16 @@ volatile bool check_pg_en	= false;
 /* --------- VAR -------------------- */
 
 static const float ADC_STEP = (2.5/65536); // Ext Ref Voltage (2.5V) / 16Bit ADC 2^16
-
-
-
 uint8_t irqPG = 0x0;
-
 uint32_t ADT7408_temp_raw=0;
 uint16_t ADT7408_temp;
 uint16_t ADT7408_temp_prev;
-
 bool ADT7408Regs[3];
 uint32_t pollingHz;
 uint32_t reg_ThresholdEnable = 0;
 uint16_t reg_ThresholdVals [2][17];
 uint32_t pollingOld = 1000;
 uint32_t pollingNew = 1000;
-
 uint32_t EnableShadowRegister = 0;
 
 bool TPMpowerLock = false;
@@ -175,8 +178,8 @@ uint32_t xil_sysmon_fpga0_offset, xil_sysmon_fpga1_offset;
 bool XilinxBlockNewInfo = false;
 volatile i2c_control_status_t i2c_ctrl_status=waiting_first_req;
 volatile mcu_exec_steps_t mcu_exec_step=post_internal_periph_init; 
-
 volatile i2c_control_status_t i2c_ctrl_status_last=waiting_first_req;
+volatile board_status_t board_status=initialization;
 
 uint32_t i2c_connection_error=0;
 uint32_t cpld_fw_vers=0;
@@ -697,7 +700,7 @@ void CheckPowerGoodandEnable()
 		DEBUG_PRINT("ERROR: Board is powered on but pgood of MAN and AVDD PS are Low\n");
 	}
 	check_pg_en=false;
-	// TO DO: add powering off of PS and setting global_alarm_status_register
+	// TO DO: add powering off of PS and setting global_status_register
 		
 }
 
@@ -827,56 +830,69 @@ void SKAalarmManage(){
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	
 	/// -------------- ADC -----------------
-	if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
-		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		#ifndef DISABLE_AUTO_SHUTDOWN		
-		if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
-		#endif
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("-----\nADC ALARM %d too high, val %d expected max %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
-		framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
-		TPMpowerLock = true;
-		//delay_ms(500); // ONLY FOR TEST
+	if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].alarmTHRupper) && VoltagesTemps[anaReadPos].enabled){
+		
+			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+			#ifndef DISABLE_AUTO_SHUTDOWN		
+			if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
+			#endif
+			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
+			DEBUG_PRINT1("-----\nADC ALARM %d too high, val %d expected max %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
+			framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
+			TPMpowerLock = true;
+			board_status=alarm_h;
+		
 	}
-	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
-		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
-		#ifndef DISABLE_AUTO_SHUTDOWN
-		if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
-		#endif
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("-----\nADC ALARM %d too low, val %d expected min %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
-		framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
-		TPMpowerLock = true;
-		//delay_ms(500); // ONLY FOR TEST
+	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].alarmTHRdowner) && VoltagesTemps[anaReadPos].enabled){
+
+			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_ALARM
+			#ifndef DISABLE_AUTO_SHUTDOWN
+			if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
+			#endif
+			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
+			DEBUG_PRINT1("-----\nADC ALARM %d too low, val %d expected min %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRdowner);
+			framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
+			TPMpowerLock = true;
+			board_status=alarm_h;
+		
 	}
-	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && ((VoltagesTemps[anaReadPos]).enabled)){
+	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && VoltagesTemps[anaReadPos].enabled){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
 		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
 		DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRupper);
 		framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
+		board_status=warning_h;
 		//delay_ms(500); // ONLY FOR TEST
 	}	
-	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && ((VoltagesTemps[anaReadPos]).enabled)){
+	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && VoltagesTemps[anaReadPos].enabled){
 		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
 		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
 		DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRdowner);
 		framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
+		board_status=warning_l;
 		//delay_ms(500); // ONLY FOR TEST
 	}
 
 	/// -------------- ADC -----------------
 	
 	/// -------------- Other Voltage/Current/Temps -----------------------
-	if (XilinxBlockNewInfo){
+	if (XilinxBlockNewInfo)
+	{
 		for (int i = BOARDTEMP; i < FPGA1FEVA+1; i++)
 		{
 			if (i == BOARDTEMP)
 			{
+				//DEBUG_PRINT("I2C Connection Error > I2C_CONNECTION_ERR_MAX\n");
+				
+				
 				if (i2c_connection_error > I2C_CONNECTION_ERR_MAX)
 				{
+					DEBUG_PRINT("I2C Connection Error > I2C_CONNECTION_ERR_MAX\n");
+					
 					int status=1;
 					if(i2c_ctrl_status==waiting_first_req)
 						status	 = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
+					
 					if(status == 0)
 					{
 						i2c_connection_error=0;
@@ -884,17 +900,39 @@ void SKAalarmManage(){
 					else
 					{
 						DEBUG_PRINT("I2C Unreachable\n");
+						
 						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 						#ifndef DISABLE_AUTO_SHUTDOWN
-						if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
+						if (!TPMoverrideAutoShutdown) 
+							SKAPower(0,0,0,0,0);
 						#endif
 						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,0x30000,16,0x2); // Write bit on itpm_cpld_regfile_global_status
 						//DEBUG_PRINT1("-----\nERROR I2C Unreachable for %d times, powered off same supplies\n-----\n", I2C_CONNECTION_ERR_MAX");
 						framWrite(FRAM_I2C_UNREACH_ERR,i2c_connection_error);
+						board_status=alarm_h;
 						TPMpowerLock = true;
 					}
 				}
-				else if ((VoltagesTemps[i].ADCread&0x8000 != 0x8000) && (VoltagesTemps[i].ADCread&0xfff > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled))
+				else
+				{					
+					if ( ((VoltagesTemps[i].ADCread&0x8000) != 0x8000) && ((VoltagesTemps[i].ADCread&0xfff) > VoltagesTemps[i].alarmTHRupper) && VoltagesTemps[i].enabled)
+					{
+						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
+						#ifndef DISABLE_AUTO_SHUTDOWN
+						if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
+						#endif
+						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
+						DEBUG_PRINT1("-----\nADC ALARM_ %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
+						framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
+						TPMpowerLock = true;
+						board_status=alarm_h;
+						//delay_ms(500); // ONLY FOR TEST
+					}
+				}
+			}
+			else
+			{ 
+				if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread > VoltagesTemps[i].alarmTHRupper) && VoltagesTemps[i].enabled)
 				{
 					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 					#ifndef DISABLE_AUTO_SHUTDOWN
@@ -904,23 +942,11 @@ void SKAalarmManage(){
 					DEBUG_PRINT1("-----\nADC ALARM_ %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
 					framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
 					TPMpowerLock = true;
+					board_status=alarm_h;
 					//delay_ms(500); // ONLY FOR TEST
 				}
-			}
-			else
-			{ 
-				if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread > VoltagesTemps[i].alarmTHRupper) && ((VoltagesTemps[i]).enabled)){
-						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
-						#ifndef DISABLE_AUTO_SHUTDOWN
-						if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
-						#endif
-						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
-						DEBUG_PRINT1("-----\nADC ALARM_ %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
-						framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
-						TPMpowerLock = true;
-						//delay_ms(500); // ONLY FOR TEST
-					}
-				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread < VoltagesTemps[i].alarmTHRdowner) && ((VoltagesTemps[i]).enabled)){
+				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread < VoltagesTemps[i].alarmTHRdowner) && VoltagesTemps[i].enabled)
+				{
 					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 					#ifndef DISABLE_AUTO_SHUTDOWN
 					if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
@@ -929,29 +955,33 @@ void SKAalarmManage(){
 					DEBUG_PRINT1("-----\nADC ALARM %d too low, val %d expected min %d\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRdowner);
 					framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
 					TPMpowerLock = true;
+					board_status=alarm_l;
 					//delay_ms(500); // ONLY FOR TEST
 				}
-				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread > VoltagesTemps[i].warningTHRupper) && ((VoltagesTemps[i]).enabled)){
+				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread > VoltagesTemps[i].warningTHRupper) && VoltagesTemps[i].enabled)
+				{
 					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
 					XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
 					DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRupper);
 					framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[i].ADCread);
+					board_status=warning_h;
 					//delay_ms(500); // ONLY FOR TEST
 				}
-				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread < VoltagesTemps[i].warningTHRdowner) && ((VoltagesTemps[i]).enabled)){
+				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread < VoltagesTemps[i].warningTHRdowner) && VoltagesTemps[i].enabled)
+				{
 					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
 					XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
 					DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRdowner);
 					framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[i].ADCread);
+					board_status=warning_l;
 					//delay_ms(500); // ONLY FOR TEST
 				}
-		}
+			}
 		XilinxBlockNewInfo = false;
-	}
 		}
-	
 	/// -------------- Other Voltage/Current/Temps ---------------------------	
-	
+	}
+	framWrite(FRAM_BOARD_STATUS,board_status);
 }
 
 int32_t SAMinternalTempConv(uint32_t raw) {
@@ -986,8 +1016,8 @@ void exchangeDataBlockXilinx(){
 	static uint32_t timer = 0;
 	uint32_t res;
 	uint32_t ticket;
-	static bool xil0_sm_disabled = false;
-	static bool xil1_sm_disabled = false;
+	static bool xil0_sm_disabled = true;
+	static bool xil1_sm_disabled = true;
 	smap_lock(&xil_ack,&timeout,&tick_num);
 	if ((timeout >= 20) && !xil_ack){
 		DEBUG_PRINT2("CPLD LOCK MCU - Xilinx Busy (Maybe someone is programming the FPGAs?)\n");  // Timeout
@@ -1001,7 +1031,8 @@ void exchangeDataBlockXilinx(){
 		VoltagesTemps[FPGA1TEMP].enabled = false;
 		VoltagesTemps[FPGA1FEVA].enabled = false;
 	}
-	if (xil0_sm_disabled && xil1_sm_disabled) xil_ack = false;
+	if (xil0_sm_disabled && xil1_sm_disabled) 
+		xil_ack = false;
 	if (xil_ack){ // If bus is mine...
 		uint32_t xil;
 		uint32_t xil_done = 0xfffffff;
@@ -1016,9 +1047,9 @@ void exchangeDataBlockXilinx(){
 		uint32_t res2;
 		if (res & EN_FPGA) { // EnableShadow Reg
 			if (((xil_done == 1) && (xil_init == 1)) || ((xil_done == 3) && (xil_init == 3))){
-				smap_loc_renew(&xil_ack,tick_num);
-				if(xil_ack==false)
-				DEBUG_PRINT("Error While Renew SMAP LOCK");
+				//smap_loc_renew(&xil_ack,tick_num);
+				//if(xil_ack==false)
+				//	DEBUG_PRINT("Error While Renew SMAP LOCK");
 				if (timer > 4){
 					mcu_exec_step=exchangedatablockxilinx3;
 					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
@@ -1070,9 +1101,9 @@ void exchangeDataBlockXilinx(){
 				}
 			}
 			if (((xil_done == 2) && (xil_init == 2)) || ((xil_done == 3) && (xil_init == 3))){
-				smap_loc_renew(&xil_ack,tick_num);
-				if(xil_ack==false)
-					DEBUG_PRINT("Error While Renew SMAP LOCK");
+				//smap_loc_renew(&xil_ack,tick_num);
+				//if(xil_ack==false)
+				//	DEBUG_PRINT("Error While Renew SMAP LOCK");
 				if (timer > 5){
 					mcu_exec_step=exchangedatablockxilinx5;
 					framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
@@ -2095,6 +2126,7 @@ int main(void)
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	mcu_exec_step=pre_startup_stuff;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+	framWrite(FRAM_BOARD_STATUS,board_status);
 	StartupStuff();
 	mcu_exec_step=post_startup_stuff;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
@@ -2123,7 +2155,7 @@ int main(void)
 	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 	{	
 		//tpm_wd_update();
-		tpm_wd_init(WDT_CPLD_REG);
+		//tpm_wd_init(WDT_CPLD_REG);
 		tpm_wd_update();
 	}
 	framWrite(ENABLE_ACCESS_CHECK, 0);	//disable access check
@@ -2136,6 +2168,8 @@ int main(void)
 	mcu_exec_step=xilaccessdbg;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	*/
+	board_status=running;
+	framWrite(FRAM_BOARD_STATUS,board_status);
 	while (1) {
 		uint32_t i2creg;
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)

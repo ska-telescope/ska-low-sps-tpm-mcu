@@ -518,8 +518,8 @@ uint32_t value
 	uint32_t tmp;
 	
 	success = XO3_Read(RegBA, &tmp);
-	tmp &= ~RegMask;
-	tmp += (value << shift);
+	tmp = tmp & (~RegMask);
+	tmp = tmp | ((value << shift)&RegMask);
 		
 	XO3_WriteByte(RegBA, tmp);
 	
