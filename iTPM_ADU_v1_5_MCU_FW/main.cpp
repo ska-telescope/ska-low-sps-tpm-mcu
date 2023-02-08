@@ -149,7 +149,7 @@ volatile bool spi_timeout = false;
 volatile bool irqTimerSlow = false;
 volatile bool irqTimerFast = false;
 volatile bool irqExternalFPGA = false;
-volatile bool check_pg_en	= false;
+
 
 
 /* --------- VAR -------------------- */
@@ -188,6 +188,7 @@ uint32_t pgood_reg=0;
 uint32_t ena_reg=0;
 volatile uint32_t last_i2c_ack=0;
 volatile uint32_t last_i2c_req=0;
+volatile uint32_t PG_ADC_unstable=0;
 
 
 
@@ -699,8 +700,7 @@ void CheckPowerGoodandEnable()
 		pgood_err_reg=pgood_err_reg|(PG_MAN_irq | PG_AVDD_irq);
 		DEBUG_PRINT("ERROR: Board is powered on but pgood of MAN and AVDD PS are Low\n");
 	}
-	check_pg_en=false;
-	// TO DO: add powering off of PS and setting global_status_register
+		// TO DO: add powering off of PS and setting global_status_register
 		
 }
 
@@ -1555,6 +1555,8 @@ int SKAenableCheck(void){
 			XO3_WriteByte(itpm_cpld_regfile_enable_shadow, enable);
 			EnableShadowRegister = enable;
 			DEBUG_PRINT("Powered devices - %x\n", enable);
+			if (enable & EN_ADC == EN_ADC) 
+				PG_ADC_unstable = 5;
 			ret = 0;
 		}
 		else if (TPMoverride){
@@ -1619,23 +1621,28 @@ static void IRQfromCPLD(void){
 }
 
 static void IRQpgFPGA(void){
-	if(irqPG == 0) irqPG = PG_FPGA_irq;
+	//if(irqPG == 0) 
+	irqPG = irqPG|PG_FPGA_irq;
+	
+	
 }
 
 static void IRQpgFE(void){
-	if(irqPG == 0) irqPG = PG_FE_irq;
+	//if(irqPG == 0) 
+	irqPG = irqPG | PG_FE_irq;
 }
 
 static void IRQpgAVDD(void){
-	if(irqPG == 0) irqPG = PG_AVDD_irq;
+	irqPG = irqPG | PG_AVDD_irq;
 }
 
 static void IRQpgMAN(void){
-	if(irqPG == 0) irqPG = PG_MAN_irq;
+	irqPG = irqPG |  PG_MAN_irq;
 }
 
 static void IRQpgADC(void){
-	if(irqPG == 0) irqPG = PG_ADC_irq;
+	irqPG = irqPG | PG_ADC_irq;
+	PG_ADC_unstable= 5;
 }
 
 void IRQinternalCPLDhandler(void){
@@ -1665,8 +1672,10 @@ void IRQinternalCPLDhandler(void){
 }
 
 void IRQinternalPGhandler(void){
+	uint8_t irqPG_curr=0;
 	uint32_t powergood_register = 0;
 	mcu_exec_step=irqinternalpghandler;
+	irqPG_curr=irqPG;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	if(gpio_get_pin_level(PG_FPGA)) powergood_register += PG_FPGA_irq;
 	if(gpio_get_pin_level(PG_FE  )) powergood_register += PG_FE_irq;
@@ -1676,12 +1685,12 @@ void IRQinternalPGhandler(void){
 	
 	framWrite(FRAM_POWERGOOD, powergood_register);
 	
-	DEBUG_PRINT("IRQ PowerGood status changed - 0x%x\n", powergood_register);
+	DEBUG_PRINT("IRQ PowerGood status changed - 0x%x (irq_id 0x%x)\n", powergood_register, irqPG_curr);
 	
 	pgood_reg=powergood_register;
-	irqPG = 0;
-	if (check_pg_en == false)
-		check_pg_en=true;
+	irqPG = irqPG & (~irqPG_curr) ;
+	CheckPowerGoodandEnable();
+	
 }
 
 void StartupStuff(void){
@@ -1813,7 +1822,7 @@ void taskSlow(){
 			errorSPI = 0;
 		}
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
-		if((res&EN_ADC == EN_ADC) && (i2c_ctrl_status==waiting_first_req) )
+		if((res&EN_ADC == EN_ADC) && (i2c_ctrl_status==waiting_first_req) && (PG_ADC_unstable== 0) )
 			TWIdataBlock();
 		else{
 			framRead(FRAM_BOARD_ALARM, &res);
@@ -1823,6 +1832,17 @@ void taskSlow(){
 				VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp;
 			}
 		}
+		if(PG_ADC_unstable!= 0)
+			PG_ADC_unstable=PG_ADC_unstable-1;
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		exchangeDataBlock();
 		//mcu_exec_step=taskslow1;
 		//framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
@@ -2190,11 +2210,13 @@ int main(void)
 			i2c_manager();
 		}
 		if (irqExternalFPGA) IRQinternalCPLDhandler();
+		if (irqPG > 0) IRQinternalPGhandler();
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
 			tpm_wd_update();
 			i2c_manager();
 		}
+		if (irqPG > 0) IRQinternalPGhandler();
 		if (irqTimerSlow) taskSlow();
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
@@ -2207,6 +2229,5 @@ int main(void)
 			tpm_wd_update();
 			i2c_manager();
 		}
-		if (check_pg_en) CheckPowerGoodandEnable();	
 	}
 }
