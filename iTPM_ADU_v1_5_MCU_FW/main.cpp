@@ -888,7 +888,6 @@ void SKAalarmManage(){
 				if (i2c_connection_error > I2C_CONNECTION_ERR_MAX)
 				{
 					DEBUG_PRINT("I2C Connection Error > I2C_CONNECTION_ERR_MAX\n");
-					
 					int status=1;
 					if(i2c_ctrl_status==waiting_first_req)
 						status	 = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
@@ -900,7 +899,6 @@ void SKAalarmManage(){
 					else
 					{
 						DEBUG_PRINT("I2C Unreachable\n");
-						
 						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 						#ifndef DISABLE_AUTO_SHUTDOWN
 						if (!TPMoverrideAutoShutdown) 
@@ -917,16 +915,47 @@ void SKAalarmManage(){
 				{					
 					if ( ((VoltagesTemps[i].ADCread&0x8000) != 0x8000) && ((VoltagesTemps[i].ADCread&0xfff) > VoltagesTemps[i].alarmTHRupper) && VoltagesTemps[i].enabled)
 					{
-						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
-						#ifndef DISABLE_AUTO_SHUTDOWN
-						if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
-						#endif
-						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
-						DEBUG_PRINT1("-----\nADC ALARM_ %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
-						framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
-						TPMpowerLock = true;
-						board_status=alarm_h;
-						//delay_ms(500); // ONLY FOR TEST
+						int status=1;
+						DEBUG_PRINT1("TEMP ERR Detected raw reg  %x\n", ADT7408_temp_raw);
+						status	 = twiFpgaWrite(0x30, 1, 2, 0x06, &ADT7408_temp_raw, i2c1); //temp_value 0x30
+						if (ADT7408_temp_raw==0x11d4)
+						{
+							status	 = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
+							DEBUG_PRINT1("TEMP ERR Detected reread at 0x05 %x, op_status %d \n", ADT7408_temp_raw, status);
+							if(((VoltagesTemps[i].ADCread&0xfff) > VoltagesTemps[i].alarmTHRupper) && VoltagesTemps[i].enabled)
+							{
+								DEBUG_PRINT1("TEMP ERR Detected reread at 0x06 %x, op_status %d \n", ADT7408_temp_raw, status);
+								XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
+								#ifndef DISABLE_AUTO_SHUTDOWN
+								if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
+								#endif						
+								XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_temperature_M,uint32_t(VoltagesTemps[i].objectType),0x2); // Write bit on itpm_cpld_regfile_global_status
+								DEBUG_PRINT1("-----\nADC ALARM_ %d too high, val %x expected max %x\n-----\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].alarmTHRupper);
+								framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[i].ADCread);
+								TPMpowerLock = true;
+								board_status=alarm_h;
+								//delay_ms(500); // ONLY FOR TEST
+							}
+							else
+							{
+								ADT7408_temp=ADT7408_temp_raw&0xfff;
+								VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp;
+							}
+						}
+						else
+						{
+							DEBUG_PRINT("Temp Sensor unreachable\n");
+							XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
+							#ifndef DISABLE_AUTO_SHUTDOWN
+							if (!TPMoverrideAutoShutdown)
+							SKAPower(0,0,0,0,0);
+							#endif
+							XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,0x30000,16,0x2); // Write bit on itpm_cpld_regfile_global_status
+							//DEBUG_PRINT1("-----\nERROR I2C Unreachable for %d times, powered off same supplies\n-----\n", I2C_CONNECTION_ERR_MAX");
+							framWrite(FRAM_I2C_UNREACH_ERR,i2c_connection_error);
+							board_status=alarm_h;
+							TPMpowerLock = true;
+						}
 					}
 				}
 			}
@@ -1821,6 +1850,7 @@ void taskSlow(){
 			DEBUG_PRINT("INFO: SPI Bus revived. Comunication OK\n");
 			errorSPI = 0;
 		}
+		if (irqPG > 0) IRQinternalPGhandler();
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
 		if((res&EN_ADC == EN_ADC) && (i2c_ctrl_status==waiting_first_req) && (PG_ADC_unstable== 0) )
 			TWIdataBlock();
@@ -1833,8 +1863,11 @@ void taskSlow(){
 			}
 		}
 		if(PG_ADC_unstable!= 0)
+		{
+			DEBUG_PRINT("PG_ADC_unstable %d \n",PG_ADC_unstable );
 			PG_ADC_unstable=PG_ADC_unstable-1;
 		
+		}
 		
 		
 		
@@ -2197,12 +2230,14 @@ int main(void)
 			tpm_wd_update();
 			i2c_manager();		
 		}
+		if (irqPG > 0) IRQinternalPGhandler();
 		gpio_toggle_pin_level(USR_LED1);
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
 			tpm_wd_update();
 			i2c_manager();
 		}
+		if (irqPG > 0) IRQinternalPGhandler();
 		ADCreadSingle();
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
