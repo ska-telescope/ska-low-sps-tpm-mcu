@@ -921,10 +921,10 @@ void SKAalarmManage(){
 						if (ADT7408_temp_raw==0x11d4)
 						{
 							status	 = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
-							DEBUG_PRINT1("TEMP ERR Detected reread at 0x05 %x, op_status %d \n", ADT7408_temp_raw, status);
-							if(((VoltagesTemps[i].ADCread&0xfff) > VoltagesTemps[i].alarmTHRupper) && VoltagesTemps[i].enabled)
+							//DEBUG_PRINT1("TEMP ERR Detected reread at 0x05 %x, op_status %d \n", ADT7408_temp_raw, status);
+							if(((ADT7408_temp_raw&0xfff) > VoltagesTemps[i].alarmTHRupper) && VoltagesTemps[i].enabled)
 							{
-								DEBUG_PRINT1("TEMP ERR Detected reread at 0x06 %x, op_status %d \n", ADT7408_temp_raw, status);
+								DEBUG_PRINT1("TEMP ERR Detected reread at 0x05 %x, \n", ADT7408_temp_raw);
 								XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_ALARM),pow(2,i),i,1); // Write bit on FRAM_BOARD_ALARM
 								#ifndef DISABLE_AUTO_SHUTDOWN
 								if (!TPMoverrideAutoShutdown) SKAPower(0,0,0,0,0);
@@ -938,6 +938,7 @@ void SKAalarmManage(){
 							}
 							else
 							{
+								DEBUG_PRINT1("TEMP ERR Detection False reread at 0x05 %x, \n", ADT7408_temp_raw);
 								ADT7408_temp=ADT7408_temp_raw&0xfff;
 								VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp;
 							}
