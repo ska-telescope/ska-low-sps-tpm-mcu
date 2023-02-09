@@ -1289,8 +1289,11 @@ void TWIdataBlock(void){
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	DEBUG_PRINT3("TWI Data Block\n");
 	// i2c1
-   //readBoardTemp(&ADT7408_temp, &ADT7408Regs[3]); // Disabled for errors
+	//status = twiFpgaWrite(0x30, 1, 2, 0x06, &retvalue, i2c1); //temp_value 0x30
+	//if (retvalue != 0x11d4)
+	//	DEBUG_PRINT("TWI Data Read ID ERROR Val %x, exp 0x11d4\n",retvalue);   
 	status = twiFpgaWrite(0x30, 1, 2, 0x05, &ADT7408_temp_raw, i2c1); //temp_value 0x30
+	//DEBUG_PRINT("TWI Data Read neg Val %x\n",ADT7408_temp_raw);
 	if(status == 0)
 	{
 		i2c_connection_error=0;
@@ -1300,7 +1303,9 @@ void TWIdataBlock(void){
 			ADT7408_temp=0x8000;
 		}
 		else
+		{
 			ADT7408_temp=ADT7408_temp_raw&0xfff;		
+		}
 		VoltagesTemps[BOARDTEMP].ADCread = (uint16_t)ADT7408_temp;
 	}
 	else if (status == 2)
@@ -1586,7 +1591,7 @@ int SKAenableCheck(void){
 			EnableShadowRegister = enable;
 			DEBUG_PRINT("Powered devices - %x\n", enable);
 			if (enable & EN_ADC == EN_ADC) 
-				PG_ADC_unstable = 5;
+				PG_ADC_unstable = 1;
 			ret = 0;
 		}
 		else if (TPMoverride){
@@ -1672,7 +1677,7 @@ static void IRQpgMAN(void){
 
 static void IRQpgADC(void){
 	irqPG = irqPG | PG_ADC_irq;
-	PG_ADC_unstable= 5;
+	PG_ADC_unstable= 1;
 }
 
 void IRQinternalCPLDhandler(void){
@@ -2209,7 +2214,7 @@ int main(void)
 	if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 	{	
 		//tpm_wd_update();
-		//tpm_wd_init(WDT_CPLD_REG);
+		tpm_wd_init(WDT_CPLD_REG);
 		tpm_wd_update();
 	}
 	framWrite(ENABLE_ACCESS_CHECK, 0);	//disable access check

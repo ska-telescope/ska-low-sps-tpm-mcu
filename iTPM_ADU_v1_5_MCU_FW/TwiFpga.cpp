@@ -115,19 +115,9 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	twi_ctrl_data += (byte2write << 8); // [23:16] byte number to write
 	twi_ctrl_data += (ICaddress); // [9:0] command - [6:0] IC address
 	
-	//check that passwd isn't changed
-	//XO3_Read(0x40000024, &res); 
-	//if(res &0x10000 == 0 )
-	//{
-	//		DEBUG_PRINT_TWI("Password not accepted\n");
-	//		return -2;
-	//}
-
 	//check that I2C isn't BUSY
 	if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
 	{
-		//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-		//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	while (statusIN & 0x1 != 0) {
@@ -135,28 +125,20 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 		if (busyRetry >= MAX_BUSY_RETRY)
 		{
 			DEBUG_PRINT_TWI("I2C busy \n");
-			//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-			//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 			return (int)statusIN;
 		}
 		
 		if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
 		{
-			//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-			//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 			return -1;
 		}
 	}
 	if (XO3_WriteByte(itpm_cpld_i2c_transmit, datatx) != 0)
 	{
-		//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-		//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	if (XO3_WriteByte(itpm_cpld_i2c_command, twi_ctrl_data) != 0)
 	{
-		//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-		//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	
@@ -168,8 +150,6 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 	
 	if (XO3_Read(itpm_cpld_i2c_status, &statusIN)!= 0)
 	{
-		//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-		//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	
@@ -178,22 +158,16 @@ int twiFpgaWrite (uint8_t ICaddress, uint8_t byte2write, uint8_t byte2read, uint
 		if (busyRetry >= MAX_BUSY_RETRY) 
 		{
 			DEBUG_PRINT_TWI("I2C busy or not ack\n");
-			//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-			//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 			return (int)statusIN;
 		}
 		
 		if (XO3_Read(itpm_cpld_i2c_status, &statusIN) !=0)
 		{
-			//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-			//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 			return -1;
 		}
 	}
 	if (XO3_Read(itpm_cpld_i2c_receive, &dataIN) != 0)
 	{
-		//if(fwver>CPLD_FW_VERSION_LOCK_CHANGE)
-		//	XO3_WriteByte(itpm_cpld_lock_lock_i2c, 0); // Clear I2C Ownership
 		return -1;
 	}
 	
