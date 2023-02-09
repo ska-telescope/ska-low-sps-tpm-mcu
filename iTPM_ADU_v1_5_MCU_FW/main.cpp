@@ -1656,14 +1656,10 @@ static void IRQfromCPLD(void){
 }
 
 static void IRQpgFPGA(void){
-	//if(irqPG == 0) 
-	irqPG = irqPG|PG_FPGA_irq;
-	
-	
+	irqPG = irqPG | PG_FPGA_irq;
 }
 
 static void IRQpgFE(void){
-	//if(irqPG == 0) 
 	irqPG = irqPG | PG_FE_irq;
 }
 
@@ -1672,7 +1668,7 @@ static void IRQpgAVDD(void){
 }
 
 static void IRQpgMAN(void){
-	irqPG = irqPG |  PG_MAN_irq;
+	irqPG = irqPG | PG_MAN_irq;
 }
 
 static void IRQpgADC(void){
@@ -1856,7 +1852,6 @@ void taskSlow(){
 			DEBUG_PRINT("INFO: SPI Bus revived. Comunication OK\n");
 			errorSPI = 0;
 		}
-		if (irqPG > 0) IRQinternalPGhandler();
 		XO3_Read(itpm_cpld_regfile_enable_shadow, &res);
 		if((res&EN_ADC == EN_ADC) && (i2c_ctrl_status==waiting_first_req) && (PG_ADC_unstable== 0) )
 			TWIdataBlock();
@@ -1874,13 +1869,6 @@ void taskSlow(){
 			PG_ADC_unstable=PG_ADC_unstable-1;
 		
 		}
-		
-		
-		
-		
-		
-		
-		
 		
 		exchangeDataBlock();
 		//mcu_exec_step=taskslow1;
