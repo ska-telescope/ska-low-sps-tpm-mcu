@@ -205,7 +205,7 @@ SPI_sync(
 					else if (rxbuf[0] == 0x11)
 					{
 						gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
-						DEBUG_PRINT_SPI("SPI Timeout cmd received in write op\n");
+						//DEBUG_PRINT_SPI("SPI Timeout cmd received in write op\n");
 						free(buffer);
 						free(rxbuffer);
 						return -1;
@@ -213,12 +213,12 @@ SPI_sync(
 					else if (count_delay > MAX_SPI_DELAY)
 					{
 						gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
-						DEBUG_PRINT_SPI("SPI Max Retry count timout cmd not received in Write op\n");
+						//DEBUG_PRINT_SPI("SPI Max Retry count timeout cmd not received in Write op\n");
 						gpio_set_pin_level(XO3_LINK1, true);
 						gpio_set_pin_level(XO3_LINK1, false);
 						free(buffer);
 						free(rxbuffer);
-						return -1;
+						return -2;
 				
 					}
 					count_delay++;
@@ -248,20 +248,20 @@ SPI_sync(
 				else if (rxbuf[0] == 0x11)
 				{
 					gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
-					DEBUG_PRINT_SPI("SPI Timeout cmd received in read op\n");
+					//DEBUG_PRINT_SPI("SPI Timeout cmd received in read op\n");
 					free(buffer);
 					free(rxbuffer);
-					return -1;
+					return -3;
 				}
 				else if (count_delay > MAX_SPI_DELAY)
 				{
 					gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
 					//gpio_set_pin_level(XO3_LINK1, true);
 					//gpio_set_pin_level(XO3_LINK1, false);
-					DEBUG_PRINT_SPI("SPI Max Retry count timout cmd not received in read op\n");
+					//DEBUG_PRINT_SPI("SPI Max Retry count timout cmd not received in read op\n");
 					free(buffer);
 					free(rxbuffer);
-					return -1;
+					return -4;
 				
 				}
 				count_delay++;
@@ -270,6 +270,7 @@ SPI_sync(
 			
 			scoda.size  = 4;
 			
+
 			risp = spi_m_sync_transfer(&SPI_0, &scoda);
 			gpio_set_pin_level(FPGA_CS, true); // Deselect Device and pullup CS
 			if (count_delay > 4) DEBUG_PRINT_SPI("Delay Count %d\n", count_delay);
@@ -308,6 +309,8 @@ XO3_WriteByte(
     uint32_t value
 )
 {
+    if(regs < 0x30000000)
+	  return -2;
 	uint8_t txBuffer[10];
 	uint8_t rxBuffer[10];
 	uint8_t retry=5;
@@ -328,8 +331,11 @@ XO3_WriteByte(
 	while(retry>0) 
 	{
 		success = SPI_sync(1, txBuffer, rxBuffer, 9);
-		if (success == -1)
+		if (success <0)
+		{
 			retry=retry-1;
+			DEBUG_PRINT_SPI("Error in XO3_WriteByte regs %x, SPI_sync ret %d \n",regs,success);
+		}
 		else break;
 	} 
 	
@@ -358,6 +364,8 @@ XO3_Read3(
     uint32_t* value
 )
 {
+   if(regs < 0x30000000)
+   return -2;
   uint8_t txBuffer[10];
   uint8_t rxBuffer[10];
   uint32_t dato=0;
@@ -376,7 +384,11 @@ XO3_Read3(
    while(retry>0)
    {
 	success = SPI_sync(1, txBuffer, rxBuffer, 10);
-	if (success == -1) retry=retry-1;
+	if (success <0) 
+	{
+		retry=retry-1;
+		DEBUG_PRINT_SPI("Error in XO3_Read3 regs %x, SPI_sync ret %d \n",regs,success);
+	}
 	else break;
     }
   if (retry != 20)
@@ -404,6 +416,9 @@ XO3_Read(
     uint32_t* value
 )
 {
+  if(regs < 0x30000000)
+	return -2;
+  
   uint8_t txBuffer[10];
   uint8_t rxBuffer[10];
   uint32_t dato=0;
@@ -421,9 +436,10 @@ XO3_Read(
 while(retry>0)
 {
 	success = SPI_sync(1, txBuffer, rxBuffer, 10);
-	if (success == -1)
+	if (success < 0)
 	{
 		 retry=retry-1;
+		 DEBUG_PRINT_SPI("Error in XO3_Read regs %x, SPI_sync ret %d \n",regs,success);
 	}
 	else break;
 }
@@ -452,6 +468,7 @@ XO3_ReadXilinx(
     uint32_t* value
 )
 {
+
   uint8_t txBuffer[10];
   uint8_t rxBuffer[12];
   uint32_t dato=0;
@@ -473,11 +490,15 @@ XO3_ReadXilinx(
   while(retry>0)
   {
 	  success = SPI_sync(1, txBuffer, rxBuffer, 30); //11
-	  if (success == -1) retry=retry-1;
+	  if (success < 0 )
+	  {
+		DEBUG_PRINT_SPI("Error in XO3_ReadXilinx regs %x, SPI_sync ret %d \n",regs,success);
+		retry=retry-1;
+	  }
 	  else break;
   }
   if (retry != 20)
-	DEBUG_PRINT_SPI("Retry number %d \n",20-retry );
+	DEBUG_PRINT_SPI("Retry number %d in access \n",20-retry );
   dato = (((rxBuffer[0] & 0xFF) << 24) | ((rxBuffer[1] & 0xFF) << 16) | ((rxBuffer[2] & 0xFF) << 8) | rxBuffer[3]);
   //dato = (((rxBuffer[7] & 0xFF) << 24) | ((rxBuffer[8] & 0xFF) << 16) | ((rxBuffer[9] & 0xFF) << 8) | rxBuffer[10]);
   //memcpy(dato, rxBuffer[6], 4);

@@ -60,7 +60,7 @@ char bufferOut[512];
 #define DEBUG_PRINT3(...) do{ } while ( false )
 #endif
 
-const uint32_t _build_version = 0xb000011A;
+const uint32_t _build_version = 0xb000011B;
 
 const uint32_t _build_date = ((((BUILD_YEAR_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH1 & 0xFF - 0x30)) << 24) | (((BUILD_YEAR_CH2 & 0xFF - 0x30) * 0x10 ) + ((BUILD_YEAR_CH3 & 0xFF - 0x30)) << 16) | (((BUILD_MONTH_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_MONTH_CH1 & 0xFF - 0x30)) << 8) | (((BUILD_DAY_CH0 & 0xFF - 0x30) * 0x10 ) + ((BUILD_DAY_CH1 & 0xFF - 0x30))));
 //const uint32_t _build_time = (0x00 << 24 | (((__TIME__[0] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[1] & 0xFF - 0x30)) << 16) | (((__TIME__[3] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[4] & 0xFF - 0x30)) << 8) | (((__TIME__[6] & 0xFF - 0x30) * 0x10 ) + ((__TIME__[7] & 0xFF - 0x30))));
@@ -394,13 +394,13 @@ void smap_lock(bool *xil_ack, uint32_t *retry,uint32_t *ticket_num )
 	{	
 		tpm_wd_update();
 		XO3_Read(itpm_cpld_lock_queue_number,&ticket);
-		DEBUG_PRINT3("MCU SMAP LOCK Ticket 0x%x\n",ticket);
+		DEBUG_PRINT3("TRY MCU SMAP LOCK Ticket 0x%x\n",ticket);
 		do{
 			XO3_WriteByte(itpm_cpld_lock_lock_smap, ticket); // Request Xilinx Bus Ownership
 			XO3_Read(itpm_cpld_lock_lock_smap, &received_d);
 			if (received_d == ticket){ // Check ownership
 				*xil_ack = true;
-				DEBUG_PRINT3("CPLD SMAP LOCK MCU - Xilinx OK - Retry %i\n", timeout);
+				DEBUG_PRINT3("SMAP LOCK MCU - Xilinx OK, Ticket 0x%x\n",ticket);
 				break;
 			}
 			else
@@ -416,7 +416,7 @@ void smap_lock(bool *xil_ack, uint32_t *retry,uint32_t *ticket_num )
 				XO3_Read(itpm_cpld_lock_mlock0, &received_d);
 				if (received_d == itpm_cpld_smap_global){ // Check ownership
 					*xil_ack = true;
-					DEBUG_PRINT3("CPLD SMAP LOCK MCU - Xilinx OK - Retry %i\n", timeout);
+					DEBUG_PRINT3("SMAP LOCK MCU - Xilinx OK Ticket 0x%x\n",ticket);
 					retry_num = 10;
 				}
 				else { retry_num++; }
@@ -432,13 +432,13 @@ void smap_loc_renew(bool *xil_ack,uint32_t ticket_num){
 	uint32_t retry_num=0;
 	mcu_exec_step=smaplockrenew;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
-	DEBUG_PRINT3("MCU SMAP LOCK Renew Ticket 0x%x\n",ticket_num);
+	DEBUG_PRINT3("TRY MCU SMAP LOCK Renew Ticket 0x%x\n",ticket_num);
 	do{
 		XO3_WriteByte(itpm_cpld_lock_lock_smap, ticket_num); // Request Xilinx Bus Ownership
 		XO3_Read(itpm_cpld_lock_lock_smap, &received_d);
 		if (received_d == ticket_num){ // Check ownership
 			*xil_ack = true;
-			DEBUG_PRINT3("CPLD SMAP LOCK MCU - Xilinx OK - Retry %i\n", timeout);
+			DEBUG_PRINT3("MCU SMAP LOCK Renew  OK Ticket 0x%x\n",ticket_num);
 			break;
 		}
 		else
@@ -450,12 +450,16 @@ void smap_loc_renew(bool *xil_ack,uint32_t ticket_num){
 
 void smap_unlock()
 {
+		uint32_t ticket_num=0;
 		mcu_exec_step=smapunlock;
 		framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
+		XO3_Read(itpm_cpld_lock_lock_smap, &ticket_num);
 		if(cpld_fw_vers > CPLD_FW_VERSION_LOCK_CHANGE )
 			XO3_WriteByte(itpm_cpld_lock_lock_smap, 0x0); // Clear Xilinx Bus Ownership
 		else
 			XO3_WriteByte(itpm_cpld_lock_mlock0, 0xffffffff); // Clear Xilinx Bus Ownership
+		DEBUG_PRINT3("SMAP UNLOCK MCU, Ticket n. 0x%x\n",ticket_num );
+		
 }
 
 
@@ -1061,8 +1065,8 @@ void exchangeDataBlockXilinx(){
 		VoltagesTemps[FPGA1TEMP].enabled = false;
 		VoltagesTemps[FPGA1FEVA].enabled = false;
 	}
-	if (xil0_sm_disabled && xil1_sm_disabled) 
-		xil_ack = false;
+	//if (xil0_sm_disabled && xil1_sm_disabled) 
+		//xil_ack = false;
 	if (xil_ack){ // If bus is mine...
 		uint32_t xil;
 		uint32_t xil_done = 0xfffffff;
@@ -1176,8 +1180,9 @@ void exchangeDataBlockXilinx(){
 				}
 			}
 		}
+		smap_unlock();
 	}
-	smap_unlock();
+	
 	//XO3_WriteByte(itpm_cpld_lock_lock_smap, 0x0); // Clear Xilinx Bus Ownership
 }
 
@@ -2166,6 +2171,8 @@ int main(void)
 	uint32_t pippo2=0;
 	uint32_t mtime, xil;
 	uint32_t xil_done = 0xfeffffff;
+	uint32_t uart_dbg_dis=0;
+	bool uart_dbg_disabled=false;
 	
 	
 	/* Initializes MCU, drivers and middleware */
@@ -2217,8 +2224,20 @@ int main(void)
 	*/
 	board_status=running;
 	framWrite(FRAM_BOARD_STATUS,board_status);
+	//int count_uart=10;
 	while (1) {
 		uint32_t i2creg;
+		framRead(FRAM_MCU_UART_DBG_DIS,&uart_dbg_dis);
+		if((uart_dbg_dis&0x1)==1 && uart_dbg_disabled == false )
+		{
+			gpio_set_pin_direction(XO3_UART_TX, GPIO_DIRECTION_IN);
+			uart_dbg_disabled = true;
+		}
+		if((uart_dbg_dis&0x1)==0 && uart_dbg_disabled == true )
+		{
+			gpio_set_pin_function(XO3_UART_TX, PINMUX_PA22C_SERCOM3_PAD0);	
+			uart_dbg_disabled = false;
+		}
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
 			tpm_wd_update();
