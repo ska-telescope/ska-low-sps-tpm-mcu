@@ -2222,6 +2222,7 @@ int main(void)
 	mcu_exec_step=xilaccessdbg;
 	framWrite(FRAM_MCU_STEP, (uint32_t)mcu_exec_step);
 	*/
+	framWrite(FRAM_MCU_POOLING_INTERVAL,100); //set MCU Polling time to 100
 	board_status=running;
 	framWrite(FRAM_BOARD_STATUS,board_status);
 	//int count_uart=10;
