@@ -190,8 +190,8 @@ volatile uint32_t last_i2c_ack=0;
 volatile uint32_t last_i2c_req=0;
 volatile uint32_t PG_ADC_unstable=0;
 
-volatile bool update_global_status_warn_volt=true;
-volatile bool update_global_status_warn_temp=true;
+bool update_global_status_warn_volt=true;
+bool update_global_status_warn_temp=true;
 
 
 /* -----------------------------------*/
@@ -1003,7 +1003,7 @@ void SKAalarmManage(){
 				}
 				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread > VoltagesTemps[i].warningTHRupper) && VoltagesTemps[i].enabled)
 				{
-					if(update_global_status_warn_temp==true)
+					if(update_global_status_warn_volt==true)
 					{
 						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
 						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
@@ -1015,7 +1015,7 @@ void SKAalarmManage(){
 				}
 				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread < VoltagesTemps[i].warningTHRdowner) && VoltagesTemps[i].enabled)
 				{
-					if(update_global_status_warn_temp==true)
+					if(update_global_status_warn_volt==true)
 					{
 						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
 						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
@@ -1865,11 +1865,14 @@ void check_clear_global_status_warn()
 	voltages_warn=((global_status_alm&itpm_cpld_regfile_global_status_voltage_M)>>itpm_cpld_regfile_global_status_voltage_B)&0x1;
 	temp_warn=((global_status_alm&itpm_cpld_regfile_global_status_temperature_M)>>itpm_cpld_regfile_global_status_temperature_B)&0x1;
 	voltages_ack=(((global_status_ack&itpm_cpld_regfile_global_status_voltage_M)>>itpm_cpld_regfile_global_status_voltage_B)&0x1);
-	temp_ack=(((global_status_ack&itpm_cpld_regfile_global_status_temperature_M)>>itpm_cpld_regfile_global_status_temperature_B)&0x1);		
+	temp_ack=(((global_status_ack&itpm_cpld_regfile_global_status_temperature_M)>>itpm_cpld_regfile_global_status_temperature_B)&0x1);	
+		
 	if (voltages_warn==0x1)
 		update_global_status_warn_volt=false;
 	if (temp_warn==0x1)
 		update_global_status_warn_temp=false;
+	//if (temp_warn==0x1 || voltages_warn==0x1)
+	//	DEBUG_PRINT2("Global status warn voltages: %d, temperatures: %d \n",voltages_warn,temp_warn);
 	if (global_status_ack!=0)
 	{
 		if(voltages_ack==0x1)	
@@ -1888,7 +1891,8 @@ void check_clear_global_status_warn()
 			XO3_WriteByte(itpm_cpld_regfile_global_status_ack, global_status_ack&(global_status_temp_warn_clear_mask));
 			update_global_status_warn_temp=true;
 		}
-	}	
+	}
+	//DEBUG_PRINT2("Global status warn update voltages: %d, temperatures: %d \n",update_global_status_warn_volt,update_global_status_warn_temp);	
 	
 
 }
