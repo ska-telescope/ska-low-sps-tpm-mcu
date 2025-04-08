@@ -1857,6 +1857,14 @@ static void IRQtimerSlow(const struct timer_task *const timer_task){
 	irqTimerSlow = true; // Enable Task
 }
 
+
+/*
+	@brief: Check and clear global status alarm voltages and temperature warning
+	@Description: Evaluate if a temperature or voltages flag was detected and disable update of the last
+	warning detected until a clear request is provided, if a clear request is detected clean warning reg values
+	and warning flasg in global status and enable warning update
+
+*/
 void check_clear_global_status_warn()
 {
 	uint32_t voltages_warn,temp_warn,temp_ack,voltages_ack,global_status_alm,global_status_ack;
