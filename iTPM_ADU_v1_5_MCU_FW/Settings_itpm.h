@@ -27,7 +27,15 @@ static uint32_t *ram = (uint32_t *)HMCRAMC0_ADDR;
 
 const uint16_t DEFAULT_POLLING_INTERVAL = 1000;
 
+
 // ---------------------------------------------------------------------------
+#define global_status_voltages_warn_mask 0x400
+#define global_status_temp_warn_mask 0x100
+#define global_status_voltages_warn_clear_mask 0xfffffBff
+#define global_status_temp_warn_clear_mask 0xfffffeff
+
+
+
 enum VoltTemps{SWAVDD1, SWAVDD2, SWAVDD3, MAN1V2, DDR0VREF, DDR1VREF, VMDRVDD, VINSCALED, MAN3V3, MAN1V8, MON5V0, MGTAV, MGAVTT, INTTEMP, BOARDTEMP, FPGA0TEMP, FPGA1TEMP, FPGA0FEVA, FPGA1FEVA}; 
 	
 
@@ -72,6 +80,7 @@ const float FPGA_TEMP_MULTIPLIER					= ((501.37/65536)-273.677);
 
 const uint8_t SETTING_WARN_ALARM_UPDATE			= 0x0;
 const uint32_t ENABLE_BYPASS_MAGIC				= 0xDEAD70CC;
+
 
 // Supply
 

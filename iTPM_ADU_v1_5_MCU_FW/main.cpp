@@ -190,6 +190,8 @@ volatile uint32_t last_i2c_ack=0;
 volatile uint32_t last_i2c_req=0;
 volatile uint32_t PG_ADC_unstable=0;
 
+volatile bool update_global_status_warn_volt=true;
+volatile bool update_global_status_warn_temp=true;
 
 
 /* -----------------------------------*/
@@ -240,6 +242,7 @@ void ADCreadSingle();
 void ADCstart();
 void TWIdataBlock(void);
 void check_bus_access();
+void check_clear_global_status_warn();
 
 /*******************************************************************/
 
@@ -842,7 +845,7 @@ void SKAalarmManage(){
 			#endif
 			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x2); // Write bit on itpm_cpld_regfile_global_status
 			DEBUG_PRINT1("-----\nADC ALARM %d too high, val %d expected max %d\n-----\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].alarmTHRupper);
-			framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
+			framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
 			TPMpowerLock = true;
 			board_status=alarm_h;
 		
@@ -861,20 +864,26 @@ void SKAalarmManage(){
 		
 	}
 	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread > VoltagesTemps[anaReadPos].warningTHRupper) && VoltagesTemps[anaReadPos].enabled){
-		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRupper);
-		framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
-		board_status=warning_h;
-		//delay_ms(500); // ONLY FOR TEST
+		if(update_global_status_warn_volt==true)
+		{
+			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
+			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+			DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRupper);
+			framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
+			board_status=warning_h;
+			//delay_ms(500); // ONLY FOR TEST
+		}
 	}	
 	else if ((VoltagesTemps[anaReadPos].ADCread!=0xffff) && (VoltagesTemps[anaReadPos].ADCread < VoltagesTemps[anaReadPos].warningTHRdowner) && VoltagesTemps[anaReadPos].enabled){
-		XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
-		XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
-		DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRdowner);
-		framWrite(FRAM_ALM_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
-		board_status=warning_l;
-		//delay_ms(500); // ONLY FOR TEST
+		if(update_global_status_warn_volt==true)
+		{
+			XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,anaReadPos),anaReadPos,1); // Write bit on FRAM_BOARD_WARNING
+			XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,itpm_cpld_regfile_global_status_voltage_B,0x1); // Write bit on itpm_cpld_regfile_global_status
+			DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", anaReadPos, VoltagesTemps[anaReadPos].ADCread, VoltagesTemps[anaReadPos].warningTHRdowner);
+			framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[anaReadPos].ADCread);
+			board_status=warning_l;
+			//delay_ms(500); // ONLY FOR TEST
+		}
 	}
 
 	/// -------------- ADC -----------------
@@ -994,21 +1003,27 @@ void SKAalarmManage(){
 				}
 				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread > VoltagesTemps[i].warningTHRupper) && VoltagesTemps[i].enabled)
 				{
-					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
-					XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
-					DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRupper);
-					framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[i].ADCread);
-					board_status=warning_h;
-					//delay_ms(500); // ONLY FOR TEST
+					if(update_global_status_warn_temp==true)
+					{
+						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
+						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
+						DEBUG_PRINT1("ADC WARNING %d too high, val %d expected max %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRupper);
+						framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[i].ADCread);
+						board_status=warning_h;
+						//delay_ms(500); // ONLY FOR TEST
+					}
 				}
 				else if ((VoltagesTemps[i].ADCread!=0xffff) && (VoltagesTemps[i].ADCread < VoltagesTemps[i].warningTHRdowner) && VoltagesTemps[i].enabled)
 				{
-					XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
-					XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
-					DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRdowner);
-					framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[i].ADCread);
-					board_status=warning_l;
-					//delay_ms(500); // ONLY FOR TEST
+					if(update_global_status_warn_temp==true)
+					{
+						XO3_BitfieldRMWrite((itpm_cpld_bram_cpu+FRAM_BOARD_WARNING),pow(2,i),i,1); // Write bit on FRAM_BOARD_WARNING
+						XO3_BitfieldRMWrite(itpm_cpld_regfile_global_status,itpm_cpld_regfile_global_status_voltage_M,uint32_t(VoltagesTemps[i].objectType),0x1); // Write bit on itpm_cpld_regfile_global_status
+						DEBUG_PRINT1("ADC WARNING %d too low, val %d expected min %d\n", i, VoltagesTemps[i].ADCread, VoltagesTemps[i].warningTHRdowner);
+						framWrite(FRAM_WRN_ERR_VALUE,VoltagesTemps[i].ADCread);
+						board_status=warning_l;
+						//delay_ms(500); // ONLY FOR TEST
+					}
 				}
 			}
 		XilinxBlockNewInfo = false;
@@ -1842,6 +1857,42 @@ static void IRQtimerSlow(const struct timer_task *const timer_task){
 	irqTimerSlow = true; // Enable Task
 }
 
+void check_clear_global_status_warn()
+{
+	uint32_t voltages_warn,temp_warn,temp_ack,voltages_ack,global_status_alm,global_status_ack;
+	XO3_Read(itpm_cpld_regfile_global_status, &global_status_alm);
+	XO3_Read(itpm_cpld_regfile_global_status_ack,&global_status_ack);
+	voltages_warn=((global_status_alm&itpm_cpld_regfile_global_status_voltage_M)>>itpm_cpld_regfile_global_status_voltage_B)&0x1;
+	temp_warn=((global_status_alm&itpm_cpld_regfile_global_status_temperature_M)>>itpm_cpld_regfile_global_status_temperature_B)&0x1;
+	voltages_ack=(((global_status_ack&itpm_cpld_regfile_global_status_voltage_M)>>itpm_cpld_regfile_global_status_voltage_B)&0x1);
+	temp_ack=(((global_status_ack&itpm_cpld_regfile_global_status_temperature_M)>>itpm_cpld_regfile_global_status_temperature_B)&0x1);		
+	if (voltages_warn==0x1)
+		update_global_status_warn_volt=false;
+	if (temp_warn==0x1)
+		update_global_status_warn_temp=false;
+	if (global_status_ack!=0)
+	{
+		if(voltages_ack==0x1)	
+		{
+			framWrite(FRAM_BOARD_WARNING,0);
+			framWrite(FRAM_WRN_ERR_VALUE,0);
+			XO3_WriteByte(itpm_cpld_regfile_global_status, global_status_alm&(global_status_voltages_warn_clear_mask));
+			XO3_WriteByte(itpm_cpld_regfile_global_status_ack, global_status_ack&(global_status_voltages_warn_clear_mask));
+			update_global_status_warn_volt=true;
+		}
+		if(temp_ack==0x1)
+		{
+			framWrite(FRAM_BOARD_WARNING,0);
+			framWrite(FRAM_WRN_ERR_VALUE,0);
+			XO3_WriteByte(itpm_cpld_regfile_global_status, global_status_alm&(global_status_temp_warn_clear_mask));
+			XO3_WriteByte(itpm_cpld_regfile_global_status_ack, global_status_ack&(global_status_temp_warn_clear_mask));
+			update_global_status_warn_temp=true;
+		}
+	}	
+	
+
+}
+
 void taskSlow(){
 	static uint8_t errorSPI = 0;
 	uint32_t res, res2;
@@ -2173,6 +2224,7 @@ int main(void)
 	uint32_t xil_done = 0xfeffffff;
 	uint32_t uart_dbg_dis=0;
 	bool uart_dbg_disabled=false;
+
 	
 	
 	/* Initializes MCU, drivers and middleware */
@@ -2252,6 +2304,7 @@ int main(void)
 			i2c_manager();
 		}
 		if (irqPG > 0) IRQinternalPGhandler();
+		check_clear_global_status_warn();
 		ADCreadSingle();
 		if(cpld_fw_vers>CPLD_FW_VERSION_LOCK_CHANGE)
 		{
